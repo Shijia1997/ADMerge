@@ -83,6 +83,4 @@ plot.ADMerge_res = function(res,
              position = 'stack', alpha = 0.9) +
     labs(x = distn, y = 'Number of Subjects', title = 'Participant Distribution') +
     theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
-  grid.arrange(tableGrob(tbl), p,
-               ncol = 2, as.table = TRUE, widths = c(1, 1.2))
 }
