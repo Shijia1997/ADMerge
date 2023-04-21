@@ -11,7 +11,7 @@ Use the following codes to install the CSTWAS package
 ```R
 library(devtools)
 install_github("Thewhey-Brian/ADMerge")
-library(ad_merge)
+library(ADMerge)
 ```
 For details about how to install a R package directly from GitHub: https://rdrr.io/cran/remotes/man/install_github.html.
 
