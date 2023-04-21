@@ -51,7 +51,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 #' plot.ADMerge_res(res, "AGE", "SEX")
 #' }
 #'
-#' @importFrom gridExtra grid.arrange tableGrob
+#' @import ggplot2
 #'
 plot.ADMerge_res = function(res,
                             distn, # extend ...
