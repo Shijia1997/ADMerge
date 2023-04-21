@@ -75,7 +75,7 @@ ad_data = ad_merge("path_to_biomarker_files", DATE_type = "Date", dict_src = src
 - `dict_src`: The `src_table` used for this merging. 
 
 ## Summary Information
-s3 functions `summary()` and `plot` are provided to get the summary information about the merged analysis data.
+s3 functions `summary()` and `plot()` are provided to get the summary information about the merged analysis data.
 
 ```R
 summary(ad_data)
