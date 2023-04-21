@@ -25,13 +25,13 @@ get_src_table(
 
 \item{DATE_pattern}{A regular expression pattern specifying the potential DATE variables in the data. Default is "DATE|VISITNO".}
 
-\item{IS_overlap_list}{A list of Boolean values specifying whether or not the DATE variables overlap for each file. Default is NULL.}
+\item{IS_overlap_list}{A list of logical values that specifies, when merging, whether overlapping between time windows is allowed (TRUE) or not (FALSE). The length of the list must be equal to the number of files being read. Default is NULL.}
 
-\item{WINDOW_list}{A list of numric time windows for matching the DATE variables for each file. Default is NULL.}
+\item{WINDOW_list}{A list of numeric time windows for matching the DATE variables for each file. The length of the list must be equal to the number of files being read. Default is NULL.}
 
-\item{ID_usr_list}{A list of user-specified ID variable names for each file.}
+\item{ID_usr_list}{A list of user-specified ID variable names. If provided, the function will try to match the variable names to the potential ID variables in the data files. The default is NULL.}
 
-\item{DATE_usr_list}{A list of user-specified DATE variable names for each file.}
+\item{DATE_usr_list}{A list of user-specified DATE variable names. If provided, the function will try to match the variable names to the potential DATE variables in the data files. The default is NULL.}
 
 \item{file}{A path to a file where the source table will be saved as a CSV file. If NULL, it will not be saved locally.}
 }
