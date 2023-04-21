@@ -7,6 +7,7 @@
 #' @param ... Additional parameters for the function.
 #'
 #' @return A summary of the ADMerge analysis results.
+#' @export
 #'
 #' @examples
 #' \dontrun{
@@ -43,6 +44,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 #' @param ... Additional parameters for the function.
 #'
 #' @return A bar plot of the distribution of the given variable among different groups in the merged dataset.
+#' @export
 #'
 #' @examples
 #' \dinttun{

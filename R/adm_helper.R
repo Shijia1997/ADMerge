@@ -75,10 +75,10 @@ ordered_match = function(usr_list, file_list, default_list) {
 #' @param FILE_pattern A regular expression pattern specifying the types of files to be read in. Default is ".xlsx|.xls|.csv".
 #' @param ID_pattern A regular expression pattern specifying the potential ID variables in the data. Default is "ID".
 #' @param DATE_pattern A regular expression pattern specifying the potential DATE variables in the data. Default is "DATE|VISITNO".
-#' @param IS_overlap_list A list of Boolean values specifying whether or not the DATE variables overlap for each file. Default is NULL.
-#' @param WINDOW_list A list of numric time windows for matching the DATE variables for each file. Default is NULL.
-#' @param ID_usr_list A list of user-specified ID variable names for each file.
-#' @param DATE_usr_list A list of user-specified DATE variable names for each file.
+#' @param IS_overlap_list A list of logical values that specifies, when merging, whether overlapping between time windows is allowed (TRUE) or not (FALSE). The length of the list must be equal to the number of files being read. Default is NULL.
+#' @param WINDOW_list A list of numeric time windows for matching the DATE variables for each file. The length of the list must be equal to the number of files being read. Default is NULL.
+#' @param ID_usr_list A list of user-specified ID variable names. If provided, the function will try to match the variable names to the potential ID variables in the data files. The default is NULL.
+#' @param DATE_usr_list A list of user-specified DATE variable names. If provided, the function will try to match the variable names to the potential DATE variables in the data files. The default is NULL.
 #' @param file A path to a file where the source table will be saved as a CSV file. If NULL, it will not be saved locally.
 #'
 #' @return A data frame summarizing the variables available in each file, with information on potential ID and DATE variables and the ID and DATE variables to be used for merging.
