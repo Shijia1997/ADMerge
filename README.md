@@ -44,7 +44,7 @@ The data structure table `src_table` will be one of the inputs for the main merg
 
 **Outputs:**
 A table with the following structure:
-  |      file      |          VARS_in_file         |    ID_in_file   |         DATE_in_file           | ID_for_merge | DATE_fro_merge | IS_overlap | WINDOW |
+  |      file      |          VARS_in_file         |    ID_in_file   |         DATE_in_file           | ID_for_merge | DATE_for_merge | IS_overlap | WINDOW |
   | -------------- | :---------------------------  | :-------------- | :----------------------------- | ------------ | -------------- | ---------- | ------ | 
   | CSF_file       |  Phase; ID; RID; SITEID; ...  | ID; RID; SITEID | USERDATE; USERDATE2; EXAMDATE; |      ID      |    EXAMDATE    |   FALSE    |   366   |
   | IMAGE_file     |  Phase; ID; RID; SITEID; ...  | ID; RID; SITEID | USERDATE; USERDATE2; SCANDATE; |      ID      |    SCANDATE    |   FALSE    |   366   |
