@@ -7,7 +7,7 @@ The ADMerge Package provides a function, `ad_merge()`, that merges data from var
 
 # Installation
 
-Use the following codes to install the CSTWAS package
+Use the following codes to install the ADMerge package
 ```R
 library(devtools)
 install_github("Thewhey-Brian/ADMerge")
