@@ -115,7 +115,7 @@ get_src_table = function(path,
                           ID_for_merge = f_id[1], # default to select the first one
                           DATE_for_merge = f_date[1]) %>% # default to select the first one
       mutate(IS_overlap = if_else(is.na(DATE_for_merge), NA, FALSE), # default FALSE
-             WINDOW = if_else(is.na(DATE_for_merge), NA, 366)) # defailt 366
+             WINDOW = if_else(is.na(DATE_for_merge), NA_real_, 366)) # defailt 366
     dict_src = rbind(dict_src, dict_tem)
   }
   if (nrow(dict_src) == 0) {
@@ -278,6 +278,10 @@ get_window_bound = function(original_date,
                                          Sys.Date()-(Sys.Date()-window_len/2)))
   }
 }
+
+
+
+
 
 
 
