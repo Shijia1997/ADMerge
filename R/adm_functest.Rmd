@@ -265,21 +265,20 @@ get_key_DATEs = function(dict_src,
 #' get_window_bound("2021-01-01", "2022-01-01", is_left = TRUE, ovlp = TRUE, window_len = 365)
 #' }
 #'
-get_window_bound = function(original_date,
-                            bound_date,
-                            is_left,
-                            ovlp,
-                            window_len) {
-  bound_date[is.na(bound_date)] = Sys.Date()-(Sys.Date()-window_len/2)
-  if(ovlp) {
-    return(original_date - is_left * window_len / 2)
-  }
-  else {
-    return(original_date - is_left * min(bound_date,
-                                         Sys.Date()-(Sys.Date()-window_len/2)))
-  }
-}
-
+# get_window_bound = function(original_date,
+#                             bound_date,
+#                             is_left,
+#                             ovlp,
+#                             window_len) {
+#   bound_date[is.na(bound_date)] = Sys.Date()-(Sys.Date()-window_len/2)
+#   if(ovlp) {
+#     return(original_date - is_left * window_len / 2)
+#   }
+#   else {
+#     return(original_date - is_left * min(bound_date,
+#                                          Sys.Date()-(Sys.Date()-window_len/2)))
+#   }
+# }
 
 
 ```
@@ -374,7 +373,7 @@ ad_merge = function(path,
         dat_tem = eval(as.name(dat)) %>%
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
                  across(any_of(DATE), as.Date))
-        dat_add = dat_all %>%
+        if (DATE != name_DATE){dat_add = dat_all %>%
           group_by(!!as.name(ID)) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
@@ -385,11 +384,51 @@ ad_merge = function(path,
                                                    date_right,
                                                    is_left = -1,
                                                    ovlp = OVLP,
-                                                   window_len = WIN)) %>%
+                                                   window_len = WIN))%>%
           left_join(dat_tem,
                     by = c(ID),
                     suffix = c("", ".dup"),
-                    multiple = "all")
+                     multiple = "all")  %>%
+          select(-ends_with(".dup")) %>%
+          distinct() %>%
+          filter(!!as.name(DATE) >= tem_date_left &
+                   !!as.name(DATE) < tem_date_right) %>%
+          mutate(diff = abs(!!as.name(DATE) - !!as.name(name_DATE))) %>%
+          group_by(!!as.name(ID), !!as.name(name_DATE)) %>%
+          arrange(diff, .by_group = T) %>%
+          filter(row_number() == 1) %>%
+          ungroup() %>%
+          select(-c("diff", "tem_date_left", "tem_date_right"))
+        
+        } else if (DATE == name_DATE){dat_add = dat_all %>%
+          group_by(!!as.name(ID)) %>% 
+          mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
+                                                  date_left,
+                                                  is_left = 1,
+                                                  ovlp = OVLP,
+                                                  window_len = WIN),
+                 tem_date_right = get_window_bound(!!as.name(name_DATE),
+                                                   date_right,
+                                                   is_left = -1,
+                                                   ovlp = OVLP,
+                                                   window_len = WIN))%>%
+          left_join(dat_tem,
+                    by = c(ID),
+                    suffix = c("", ".dup"),
+                     multiple = "all")  %>%
+                    distinct() %>%
+          filter(!!as.name(DATE) >= tem_date_left &
+                   !!as.name(DATE) < tem_date_right) %>%
+          mutate(diff = abs(!!as.name(DATE) - !!as.name(paste0(DATE,".dup")))) %>%
+          group_by(!!as.name(ID), !!as.name(name_DATE)) %>%
+          arrange(diff, .by_group = T) %>%
+          filter(row_number() == 1) %>%
+          ungroup() %>%
+          select(-c("diff", "tem_date_left", "tem_date_right")) %>% 
+          select(-ends_with(".dup")) 
+        
+        }
+
       }
       dat_all = dat_all %>%
         left_join(dat_add,
@@ -446,7 +485,8 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all,
-                 dict_src = dict_src)
+                 dict_src = dict_src,
+                 add = dat_add)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
@@ -477,12 +517,16 @@ ad_data = ad_merge("sample_data", DATE_type = "Date",dict_src = src_table)
 
 k = ad_data$analysis_data
 
-k
+k %>% filter(RID == 2) %>% select(c("RID","VISDATE","SITEID","diff"))
+
+k %>% filter(RID == 2)
+
+k %>% filter(RID == 2) %>% select(-c("date_left","date_right","tem_date_left","Phase","tem_date_right"))
 ```
 
 ```{r}
-
-MMSE_15Feb2024 %>% filter(RID == 2)
+ad_data$analysis_data
+MMSE_15Feb2024 %>% filter(RID == 2) 
 ```
 
 

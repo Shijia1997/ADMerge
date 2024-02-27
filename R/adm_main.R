@@ -118,7 +118,8 @@ ad_merge = function(path,
         dat_tem = eval(as.name(dat)) %>%
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
                  across(any_of(DATE), as.Date))
-        dat_add = dat_all %>%
+        if (DATE != name_DATE){dat_add = dat_all %>%
+          group_by(!!as.name(ID)) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
@@ -128,11 +129,11 @@ ad_merge = function(path,
                                                    date_right,
                                                    is_left = -1,
                                                    ovlp = OVLP,
-                                                   window_len = WIN)) %>%
+                                                   window_len = WIN))%>%
           left_join(dat_tem,
                     by = c(ID),
                     suffix = c("", ".dup"),
-                    multiple = "all") %>%
+                    multiple = "all")  %>%
           select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
@@ -143,6 +144,36 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))
+        
+        } else if (DATE == name_DATE){dat_add = dat_all %>%
+          group_by(!!as.name(ID)) %>% 
+          mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
+                                                  date_left,
+                                                  is_left = 1,
+                                                  ovlp = OVLP,
+                                                  window_len = WIN),
+                 tem_date_right = get_window_bound(!!as.name(name_DATE),
+                                                   date_right,
+                                                   is_left = -1,
+                                                   ovlp = OVLP,
+                                                   window_len = WIN))%>%
+          left_join(dat_tem,
+                    by = c(ID),
+                    suffix = c("", ".dup"),
+                    multiple = "all")  %>%
+          distinct() %>%
+          filter(!!as.name(DATE) >= tem_date_left &
+                   !!as.name(DATE) < tem_date_right) %>%
+          mutate(diff = abs(!!as.name(DATE) - !!as.name(paste0(DATE,".dup")))) %>%
+          group_by(!!as.name(ID), !!as.name(name_DATE)) %>%
+          arrange(diff, .by_group = T) %>%
+          filter(row_number() == 1) %>%
+          ungroup() %>%
+          select(-c("diff", "tem_date_left", "tem_date_right")) %>% 
+          select(-ends_with(".dup")) 
+        
+        }
+        
       }
       dat_all = dat_all %>%
         left_join(dat_add,
@@ -199,7 +230,8 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all,
-                 dict_src = dict_src)
+                 dict_src = dict_src,
+                 add = dat_add)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
