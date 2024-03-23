@@ -96,6 +96,7 @@ get_src_table = function(path,
                          WINDOW_list = NULL,
                          ID_usr_list = NULL,
                          DATE_usr_list = NULL,
+                         non_longitudinal_list = NULL,
                          file = NULL) { # outputfile
   # get the source table
   files_list = list.files(path, pattern = FILE_pattern)
@@ -107,13 +108,18 @@ get_src_table = function(path,
     assign(f_name, dat)
     f_id = grep(ID_pattern, names(dat), ignore.case = T,  value = T) # select potential ID variables
     f_date = grep(DATE_pattern, names(dat), ignore.case = T,  value = T) # select potential DATE variables
+    longitudinal_value = !((f_name %in% non_longitudinal_list)| (length(f_date) == 1 && "update_stamp" %in% f_date))
+
+    
+    
     # building source table
     dict_tem = data.frame(file = f_name,
                           VARS_in_file = paste(var_names, collapse = "; "),
                           ID_in_file = paste(f_id, collapse = "; "),
                           DATE_in_file = paste(f_date, collapse = "; "),
                           ID_for_merge = f_id[1], # default to select the first one
-                          DATE_for_merge = f_date[1]) %>% # default to select the first one
+                          DATE_for_merge = f_date[1],# default to select the first one
+                          longitudinal = longitudinal_value) %>% 
       mutate(IS_overlap = if_else(is.na(DATE_for_merge), NA, FALSE), # default FALSE
              WINDOW = if_else(is.na(DATE_for_merge), NA_real_, 366)) # defailt 366
     dict_src = rbind(dict_src, dict_tem)
@@ -149,6 +155,16 @@ get_src_table = function(path,
   if (!is.null(file)) {
     write.csv(dict_src, file = paste0(file, "/dict_src.csv"), row.names = F, quote = F)
   }
+  
+  if (!is.null(non_longitudinal_list) | (FALSE %in% dict_src$longitudinal)) {
+    dict_src$DATE_for_merge = ifelse(dict_src$longitudinal, dict_src$DATE_for_merge, NA)
+  } else {
+    dict_src$longitudinal = TRUE
+  }
+  
+  dict_src$longitudinal = ifelse(!is.na(dict_src$DATE_for_merge), TRUE, FALSE)
+  
+  
   return(dict_src)
 }
 
@@ -171,6 +187,17 @@ get_src_table = function(path,
 #'
 #' @import dplyr
 #'
+
+
+first_non_na <- function(row) {
+  non_na_values <- row[!is.na(row)]
+  if (length(non_na_values) > 0) {
+    return(non_na_values[1])
+  } else {
+    return(NA)
+  }
+}
+
 get_key_IDs = function(dict_src) {
   name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", ")))) # get all possible names
   key_ID = data.frame(matrix("NA", nrow = 0, ncol = length(name_ID)))
@@ -186,13 +213,15 @@ get_key_IDs = function(dict_src) {
     }
     merge_ID = names(dat_ID)
     key_ID = key_ID %>%
-      full_join(dat_ID, by = merge_ID, multiple = "all") %>%
-      distinct() %>%
-      na.omit()
+      full_join(dat_ID, by = merge_ID, multiple = "all") %>% 
+      distinct()
   }
   if (nrow(key_ID) == 0) {
     stop("Errors occur when generating all IDs. Please double check that the 'ID_for_merge' listed in 'dict_src' for each file is mergeable. 'dict_src' can be obtained by function 'get_src_table(path)'")
   }
+  
+  key_ID$ID_merged <- apply(key_ID, 1, first_non_na)
+  key_ID <- key_ID %>% select(ID_merged)
   return(key_ID)
 }
 
@@ -214,31 +243,53 @@ get_key_IDs = function(dict_src) {
 #' }
 #'
 
-get_key_DATEs = function(dict_src,
-                         timeline_file,
-                         DATE_type = c("Date", "Number")) {
+get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number")) {
   name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))
   name_DATE = dict_src$DATE_for_merge[grep(timeline_file, dict_src$file)]
+  name_DATE = ifelse(name_DATE == "", NA, name_DATE)
+  
   if (DATE_type == "Date") {
+    key_DATE = eval(as.name(timeline_file)) 
+    
+    if (!is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID, name_DATE))) %>%
+        mutate(across(any_of(name_ID), as.character),across(any_of(name_DATE), function(x) {
+          case_when(
+            str_detect(x, "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(x, quiet = TRUE),
+            str_detect(x, "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(x, quiet = TRUE),
+            TRUE ~ as.Date(NA)
+          )
+        })) %>%
+        na.omit() %>% 
+        group_by(across(any_of(name_ID))) %>%
+        arrange(name_DATE, .by_group = T) %>%
+        mutate(date_left = (!!as.name(name_DATE) - lag(!!as.name(name_DATE))) / 2,
+               date_right = lead(date_left))
+    }
+    
+    else if(is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID))) %>%
+        mutate(across(any_of(name_ID), as.character)) %>% 
+        na.omit()
+      
+      
+    }
+  } else if (DATE_type == "Number") {
     key_DATE = eval(as.name(timeline_file)) %>%
-      select(any_of(c(name_ID, name_DATE))) %>%
-      mutate(across(any_of(name_ID), as.character),
-             across(any_of(name_DATE), as.Date)) %>%
-      na.omit() %>%
-      group_by(across(any_of(name_ID))) %>%
-      arrange(name_DATE, .by_group = T) %>%
-      mutate(date_left  = (!!as.name(name_DATE) - lag(!!as.name(name_DATE))) / 2,
-             date_right = lead(date_left))
-  }
-  else if (DATE_type == "Number") {
-    key_DATE = eval(as.name(timeline_file)) %>%
-      select(any_of(c(name_ID, name_DATE))) %>%
-      mutate(across(everything(), as.character)) %>%
+      mutate(across(any_of(name_ID), as.character)) %>%
       na.omit()
-  }
-  else {
+    
+    if (!is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID, name_DATE))) %>%
+        mutate(across(everything(), as.character))
+    }
+  } else {
     stop("Readed 'DATE_type' must be either 'Date' or 'Number'.")
   }
+  
   return(key_DATE)
 }
 

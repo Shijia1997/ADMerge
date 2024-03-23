@@ -1,0 +1,187 @@
+---
+title: "Function Testing"
+author: "Shijia Zhang"
+date: "2024-03-10"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+source("adm_main.R")
+source("adm_helper.R")
+```
+
+# Testing for simple sample data from ADNI
+
+```{r}
+sample_path = "sample_data"
+
+src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("date"))
+
+src_table
+
+ad_data = ad_merge(sample_path, DATE_type = "Date",dict_src = src_table)
+
+ad_data$analysis_data %>% filter(ID_merged == 2)
+
+# 
+# key_ID = get_key_IDs(src_table)
+```
+
+```{r}
+`MOCA_15Feb2024 1.08.40 PM` %>% filter(RID == 2)
+```
+
+```{r}
+MMSE_15Feb2024 %>% filter(RID == 2)
+MMSE_27Feb2024 %>% filter(RID == 2)
+```
+
+
+
+# Testing for biocard internal validation
+```{r}
+biocard_path = "BIOCARD August 2021 internal"
+
+src_table = get_src_table(path = biocard_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("study_id","SUBJECT_ID"))
+
+ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table)
+
+ad_data$analysis_data 
+
+
+
+```
+# Testing for multiple sources of ANDI datasets
+
+```{r}
+ADNI_path = "ADNI_Image_merge"
+
+src_table = get_src_table(path = ADNI_path,ID_pattern = "ID",DATE_pattern = "VIS",ID_usr_list = c("RID"))
+
+
+
+ad_data = ad_merge(ADNI_path, DATE_type = "Number",dict_src = src_table)
+
+
+
+
+ad_data$analysis_data
+
+
+```
+
+
+
+```{r}
+ADNI_path = "ADNI data"
+
+src_table = get_src_table(path = ADNI_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("USERDATE"))
+
+print(src_table)
+
+ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table)
+
+ad_data$analysis_data %>% select(USERDATE,ADAS_ExamDate,EXAMDATE)
+
+
+```
+
+```{r}
+
+
+src_table
+
+UPENNBIOMK_ROCHE_ELECSYS_15Mar2024 %>% filter(RID == 376)
+
+ITEM$ANART_ExamDate
+MOCA_15Feb2024$VISDATE
+
+src_table
+
+
+```
+
+```{r}
+src_table
+```
+
+```{r}
+src_table
+```
+
+```{r}
+src_table
+```
+
+
+
+```{r}
+##########
+
+
+data = get_key_DATEs(src_table,timeline_file = "BIOCARD CSF_Lumipulse Data with dates_081320_pre1995Removed",DATE_type = "Date")
+
+data
+
+data = get_key_IDs(src_table)
+
+data 
+
+data %>% filter(!is.na(study_id))
+
+#### TODO: 把这个generate id都改成一个column name, 在function里，直接改column name
+
+
+
+
+
+##########
+
+name_ID = na.omit(unique(unlist(strsplit(src_table$ID_for_merge, ", "))))
+ 
+
+key_ID = data.frame(matrix("NA", nrow = 0, ncol = length(name_ID)))
+
+colnames(key_ID) = name_ID
+
+dat_list = src_table$file
+ 
+for (dat in dat_list) {
+    dat_ID = eval(as.name(dat)) %>%
+      select(any_of(name_ID)) %>%
+      mutate(across(everything(), as.character)) # regard all IDs as characters
+    if (ncol(dat_ID) == 0) {
+      next
+    }
+    merge_ID = names(dat_ID)
+    key_ID = key_ID %>%
+      full_join(dat_ID, by = merge_ID, multiple = "all") %>% 
+      distinct()
+}
+
+ad_data$analysis_data 
+
+ids = key_ID$study_id + key_ID$SUBJECT_ID
+```
+
+```{r}
+BIOCARD_CognitiveData_2021.11.02 %>% filter(SUBJECT_ID == 121)
+```
+```{r}
+biocard_path = "BIOCARD August 2021 internal"
+
+src_table = get_src_table(path = biocard_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("SUBJECT_ID"))
+
+ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table)
+
+ad_data$analysis_data
+```
+
+```{r}
+src_table
+```
+

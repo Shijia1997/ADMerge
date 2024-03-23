@@ -69,6 +69,7 @@ ad_merge = function(path,
   cat("dict_src generated. \n")
   # Generate key ID data
   key_ID = get_key_IDs(dict_src)
+
   # Select DATE data (there are two types of DATE, strings like visit number or actual date)
   if (!is.null(timeline_path)) {
     key_DATE = read.csv(timeline_path, header = T)
@@ -91,11 +92,10 @@ ad_merge = function(path,
   if (DATE_type == "Date") {
     dat_all = key_ID %>%
       left_join(key_DATE,
-                by = ID_DATE,
+                by = c("ID_merged" = ID_DATE),
                 multiple = "all",
                 suffix = c("", ".dup")) %>%
-      select(-ends_with(".dup")) %>%
-      filter(!is.na(!!as.name(name_DATE)))
+      select(-ends_with(".dup")) 
     base_names = names(dat_all)
     for (dat in dat_list) {
       idx = grep(dat, dict_src$file)
@@ -103,23 +103,32 @@ ad_merge = function(path,
       DATE = dict_src$DATE_for_merge[idx]
       OVLP = dict_src$IS_overlap[idx]
       WIN = dict_src$WINDOW[idx]
-      if (is.na(DATE)) { # demo
+      if (is.na(DATE)|is.na(name_DATE)) { # demo
         dat_tem = eval(as.name(dat)) %>%
           mutate(!!as.name(ID) := as.character(!!as.name(ID)))
         dat_all = dat_all %>%
           left_join(dat_tem,
-                    by = ID,
+                    by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all") %>%
           select(-ends_with(".dup")) %>%
           distinct()
+        
       }
       else { # longitudinal
         dat_tem = eval(as.name(dat)) %>%
+          filter(!is.na(across(any_of(DATE)))) %>% 
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
-                 across(any_of(DATE), as.Date))
+                 across(any_of(DATE), function(x) {
+                   case_when(
+                     str_detect(x, "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(x, quiet = TRUE),
+                     str_detect(x, "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(x, quiet = TRUE),
+                     TRUE ~ as.Date(NA)
+                   )
+                 }))
+        
         if (DATE != name_DATE){dat_add = dat_all %>%
-          group_by(!!as.name(ID)) %>% 
+          group_by(ID_merged) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
@@ -131,22 +140,25 @@ ad_merge = function(path,
                                                    ovlp = OVLP,
                                                    window_len = WIN))%>%
           left_join(dat_tem,
-                    by = c(ID),
+                    by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
           select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
-          mutate(diff = abs(!!as.name(DATE) - !!as.name(name_DATE))) %>%
-          group_by(!!as.name(ID), !!as.name(name_DATE)) %>%
+          mutate(diff = abs(as.Date(!!as.name(DATE)) - as.Date(!!as.name(name_DATE)))) %>%
+          filter(!is.na(diff)) %>% 
+          group_by(ID_merged, !!as.name(name_DATE)) %>%
           arrange(diff, .by_group = T) %>%
           filter(row_number() == 1) %>%
           ungroup() %>%
-          select(-c("diff", "tem_date_left", "tem_date_right"))
+          select(-c("diff", "tem_date_left", "tem_date_right"))%>%
+          filter(!is.na(!!as.name(name_DATE)))
+        print("Done")
         
         } else if (DATE == name_DATE){dat_add = dat_all %>%
-          group_by(!!as.name(ID)) %>% 
+          group_by(ID_merged) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
@@ -156,39 +168,49 @@ ad_merge = function(path,
                                                    date_right,
                                                    is_left = -1,
                                                    ovlp = OVLP,
-                                                   window_len = WIN))%>%
+                                                   window_len = WIN)) %>% 
+        
           left_join(dat_tem,
-                    by = c(ID),
+                    by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
-          mutate(diff = abs(!!as.name(DATE) - !!as.name(paste0(DATE,".dup")))) %>%
-          group_by(!!as.name(ID), !!as.name(name_DATE)) %>%
+          mutate(diff = abs(as.Date(!!as.name(name_DATE)) - as.Date(!!as.name(paste0(DATE,".dup"))))) %>%
+          filter(!is.na(diff)) %>% 
+          group_by(ID_merged, !!as.name(name_DATE)) %>%
           arrange(diff, .by_group = T) %>%
           filter(row_number() == 1) %>%
           ungroup() %>%
-          select(-c("diff", "tem_date_left", "tem_date_right")) %>% 
-          select(-ends_with(".dup")) 
+          select(-c("diff", "tem_date_left", "tem_date_right")) %>%
+          select(-ends_with(".dup")) %>%
+          filter(!is.na(!!as.name(name_DATE)))
+       #### This part should be modified!!!
+    
         
         }
-        
+        dat_all = dat_all %>%
+          left_join(dat_add,
+                    by = base_names,
+                    suffix = c("", ".dup")) %>%
+          select(-ends_with(".dup")) %>%
+          distinct()
       }
-      dat_all = dat_all %>%
-        left_join(dat_add,
-                  by = base_names,
-                  suffix = c("", ".dup")) %>%
-        select(-ends_with(".dup")) %>%
-        distinct()
+      
+      
     }
-    dat_all = dat_all %>%
-      select(-c("date_left", "date_right"))
+    if (!is.na(name_DATE)){
+      dat_all = dat_all %>%
+        select(-c("date_left", "date_right")) %>% 
+        filter(!is.na(!!as.name(name_DATE)))
+    }
+    
   }
   else if (DATE_type == "Number") {
     dat_all = key_ID %>%
       left_join(key_DATE,
-                by = ID_DATE,
+                by = c("ID_merged" = ID_DATE),
                 multiple = "all",
                 suffix = c("", ".dup")) %>%
       select(-ends_with(".dup")) %>%
@@ -204,7 +226,7 @@ ad_merge = function(path,
           mutate(!!as.name(ID) := as.character(!!as.name(ID)))
         dat_all = dat_all %>%
           left_join(dat_tem,
-                    by = ID,
+                    by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all") %>%
           select(-ends_with(".dup")) %>%
@@ -217,7 +239,7 @@ ad_merge = function(path,
           select(-!!as.name(DATE))
         dat_all = dat_all %>%
           left_join(dat_tem,
-                    by = c(ID, "Date"),
+                    by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all") %>%
           select(-ends_with(".dup")) %>%
@@ -230,8 +252,7 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all,
-                 dict_src = dict_src,
-                 add = dat_add)
+                 dict_src = dict_src)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
