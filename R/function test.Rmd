@@ -19,25 +19,26 @@ source("adm_helper.R")
 ```{r}
 sample_path = "sample_data"
 
-src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("date"))
+src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("date"),WINDOW_list = 3000,IS_overlap_list = TRUE)
 
 src_table
 
 ad_data = ad_merge(sample_path, DATE_type = "Date",dict_src = src_table)
 
-ad_data$analysis_data %>% filter(ID_merged == 2)
+
+ad_data$analysis_data %>% select(tem_date_left,tem_date_right,ID_merged,VISDATE,TRAILS) %>% filter(ID_merged == 229)
+
 
 # 
 # key_ID = get_key_IDs(src_table)
 ```
 
 ```{r}
-`MOCA_15Feb2024 1.08.40 PM` %>% filter(RID == 2)
+`MOCA_15Feb2024 1.08.40 PM` %>% filter(RID == 229)
 ```
 
 ```{r}
-MMSE_15Feb2024 %>% filter(RID == 2)
-MMSE_27Feb2024 %>% filter(RID == 2)
+MMSE_27Feb2024 %>% filter(RID == 229)
 ```
 
 
@@ -50,11 +51,18 @@ src_table = get_src_table(path = biocard_path,ID_pattern = "ID",DATE_pattern = "
 
 ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table)
 
-ad_data$analysis_data 
 
 
 
+src_table
 ```
+
+```{r}
+src_table
+```
+
+
+
 # Testing for multiple sources of ANDI datasets
 
 ```{r}
