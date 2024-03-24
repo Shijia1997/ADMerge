@@ -154,7 +154,9 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          filter(!is.na(!!as.name(name_DATE)))
+          filter(!is.na(!!as.name(name_DATE))) %>% 
+          distinct() %>% 
+          select(-!!as.name(DATE))
         
         
         } else if (DATE == name_DATE){
@@ -187,7 +189,8 @@ ad_merge = function(path,
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right")) %>%
           select(-ends_with(".dup")) %>%
-          filter(!is.na(!!as.name(name_DATE)))
+          filter(!is.na(!!as.name(name_DATE))) %>% 
+          distinct() 
        
     
         
@@ -216,9 +219,10 @@ ad_merge = function(path,
                 multiple = "all",
                 suffix = c("", ".dup")) %>%
       select(-ends_with(".dup")) %>%
-      mutate(!!as.name("Date") := as.character(!!as.name(name_DATE))) %>%
-      select(-!!as.name(name_DATE)) %>%
-      na.omit()
+      mutate(!!as.name("Date_timeline") := as.character(!!as.name(name_DATE))) %>% 
+      select(-!!as.name(name_DATE)) %>% 
+      na.omit() 
+    
     for (dat in dat_list) {
       idx = grep(dat, dict_src$file)
       ID = dict_src$ID_for_merge[idx]
@@ -235,17 +239,23 @@ ad_merge = function(path,
           distinct()
       }
       else { # longitudinal
+        print(dat_all)
         dat_tem = eval(as.name(dat)) %>%
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
-                 !!as.name("Date") := as.character(!!as.name(DATE))) %>%
-          select(-!!as.name(DATE))
-        dat_all = dat_all %>%
-          left_join(dat_tem,
-                    by = c("ID_merged" = ID),
-                    suffix = c("", ".dup"),
-                    multiple = "all") %>%
-          select(-ends_with(".dup")) %>%
-          distinct()
+                 !!as.name(DATE) := as.character(!!as.name(DATE))) 
+        
+        print(DATE)
+        print(dat_tem)
+        
+          dat_all = dat_all %>%
+            left_join(dat_tem,
+                      by = c("ID_merged" = ID,
+                             "Date_timeline" = DATE),
+                      suffix = c("", ".dup"),
+                      multiple = "all") %>%
+            select(-ends_with(".dup")) %>%
+            distinct()
+  
       }
     }
   }
@@ -253,7 +263,7 @@ ad_merge = function(path,
     stop("Readed 'DATE_type' must be either 'Date' or 'Number'.")
   }
   cat("Merge done! \n")
-  out_res = list(analysis_data = dat_all,
+  out_res = list(analysis_data = dat_all %>% distinct(),
                  dict_src = dict_src)
   class(out_res) = "ADMerge_res"
   return(out_res)

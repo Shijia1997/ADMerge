@@ -278,13 +278,15 @@ get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number"
     }
   } else if (DATE_type == "Number") {
     key_DATE = eval(as.name(timeline_file)) %>%
-      mutate(across(any_of(name_ID), as.character)) %>%
-      na.omit()
+      mutate(across(any_of(name_ID), as.character)) %>% 
+      distinct()
+    
     
     if (!is.na(name_DATE)) {
       key_DATE = key_DATE %>%
         select(any_of(c(name_ID, name_DATE))) %>%
-        mutate(across(everything(), as.character))
+        mutate(across(everything(), as.character)) %>% 
+        distinct()
     }
   } else {
     stop("Readed 'DATE_type' must be either 'Date' or 'Number'.")

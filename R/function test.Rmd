@@ -19,26 +19,107 @@ source("adm_helper.R")
 ```{r}
 sample_path = "sample_data"
 
-src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("date"),WINDOW_list = 3000,IS_overlap_list = TRUE)
+src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "VISCODE",ID_usr_list = c("RID"),DATE_usr_list = c("VISCODE"))
 
 src_table
 
-ad_data = ad_merge(sample_path, DATE_type = "Date",dict_src = src_table)
+ad_data = ad_merge(sample_path, DATE_type = "Number",dict_src = src_table)
 
 
-ad_data$analysis_data %>% select(tem_date_left,tem_date_right,ID_merged,VISDATE,TRAILS) %>% filter(ID_merged == 229)
-
-
+ad_data$analysis_data
 # 
 # key_ID = get_key_IDs(src_table)
 ```
+```{r}
+ad_data$analysis_data %>% filter(ID_merged == 2)
+```
+
 
 ```{r}
-`MOCA_15Feb2024 1.08.40 PM` %>% filter(RID == 229)
+MMSE_27Feb2024 %>% filter(RID == 2)
 ```
 
 ```{r}
-MMSE_27Feb2024 %>% filter(RID == 229)
+`MOCA_15Feb2024 1.08.40 PM` %>% filter(RID == 2)
+```
+
+```{r}
+MMSE_27Feb2024 %>% filter(RID == 2)
+```
+
+
+
+```{r}
+get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number")) {
+  name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))
+  name_DATE = dict_src$DATE_for_merge[grep(timeline_file, dict_src$file)]
+  name_DATE = ifelse(name_DATE == "", NA, name_DATE)
+  
+  if (DATE_type == "Date") {
+    key_DATE = eval(as.name(timeline_file)) 
+    
+    if (!is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID, name_DATE))) %>%
+        mutate(across(any_of(name_ID), as.character),across(any_of(name_DATE), function(x) {
+          case_when(
+            str_detect(x, "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(x, quiet = TRUE),
+            str_detect(x, "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(x, quiet = TRUE),
+            TRUE ~ as.Date(NA)
+          )
+        })) %>%
+        na.omit() %>% 
+        group_by(across(any_of(name_ID))) %>%
+        arrange(name_DATE, .by_group = T) %>%
+        mutate(date_left = (!!as.name(name_DATE) - lag(!!as.name(name_DATE))) / 2,
+               date_right = lead(date_left))
+    }
+    
+    else if(is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID))) %>%
+        mutate(across(any_of(name_ID), as.character)) %>% 
+        na.omit()
+      
+      
+    }
+  } else if (DATE_type == "Number") {
+    key_DATE = eval(as.name(timeline_file)) %>%
+      mutate(across(any_of(name_ID), as.character)) %>% 
+      distinct()
+    
+    
+    if (!is.na(name_DATE)) {
+      key_DATE = key_DATE %>%
+        select(any_of(c(name_ID, name_DATE))) %>%
+        mutate(across(everything(), as.character)) %>% 
+        distinct()
+    }
+  } else {
+    stop("Readed 'DATE_type' must be either 'Date' or 'Number'.")
+  }
+  
+  return(key_DATE)
+}
+```
+
+```{r}
+
+
+get_key_DATEs(src_table,timeline_file = "MMSE_27Feb2024",DATE_type = "Number") 
+```
+
+
+
+
+
+```{r}
+src_table
+`MOCA_15Feb2024 1.08.40 PM` 
+```
+
+```{r}
+MMSE_27Feb2024 %>% distinct(RID,VISCODE)
 ```
 
 
@@ -54,7 +135,7 @@ ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table)
 
 
 
-src_table
+ad_data$analysis_data
 ```
 
 ```{r}
