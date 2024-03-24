@@ -14,16 +14,19 @@ source("adm_main.R")
 source("adm_helper.R")
 ```
 
+# Testing for Date input 
+
+
 # Testing for simple sample data from ADNI
 
 ```{r}
 sample_path = "sample_data"
 
-src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "VISCODE",ID_usr_list = c("RID"),DATE_usr_list = c("VISCODE"))
+src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "VISDATE",ID_usr_list = c("RID"),DATE_usr_list = c("VISDATE"))
 
 src_table
 
-ad_data = ad_merge(sample_path, DATE_type = "Number",dict_src = src_table)
+ad_data = ad_merge(sample_path, DATE_type = "Date",dict_src = src_table)
 
 
 ad_data$analysis_data

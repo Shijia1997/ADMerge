@@ -117,7 +117,6 @@ ad_merge = function(path,
       }
       else { # longitudinal
         dat_tem = eval(as.name(dat)) %>%
-          filter(!is.na(across(any_of(DATE)))) %>% 
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
                  across(any_of(DATE), function(x) {
                    case_when(
