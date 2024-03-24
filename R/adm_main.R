@@ -204,11 +204,15 @@ ad_merge = function(path,
       }
       
       
-    }
+    }#
     if (!is.na(name_DATE)){
       dat_all = dat_all %>%
         select(-c("date_left", "date_right")) %>% 
-        filter(!is.na(!!as.name(name_DATE)))
+        mutate(!!as.name("Date_timeline") := as.Date(!!as.name(name_DATE))) %>%
+        filter(!is.na(!!as.name(name_DATE))) %>% 
+        select(1, Date_timeline,everything()) %>% 
+        select(-!!as.name(name_DATE))
+        
     }
     
   }
