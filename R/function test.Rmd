@@ -121,6 +121,21 @@ src_table
 # 颜色 以diagnosis 为准 （3个）
 # 查一下变量，以scan date为准 join diagnosis
 ```
+```{r}
+mri_diag_path = "ADNI_Image_merge"
+
+
+src_table = get_src_table(path = mri_diag_path,ID_pattern = "ID",DATE_pattern = "Date",ID_usr_list = c("RID"),DATE_usr_list = c("EXAMDATE"),WINDOW_list = 366,IS_overlap_list = FALSE)
+
+ad_data = ad_merge(mri_diag_path, DATE_type = "Date",dict_src = src_table,timeline_file = "MRIMETA_21Mar2024")
+
+ad_data$analysis_data 
+
+src_table
+```
+
+
+
 
 ```{r}
 MRIMETA_15Mar2024 %>% filter(RID == 40)
@@ -137,6 +152,30 @@ DXSUM_PDXCONV_21Mar2024 %>% filter(RID == 40)
 MRIMETA_15Mar2024 %>% filter(RID == 40)
 ```
 
+```{r}
+# Example dataframe
+df <- data.frame(
+  Name = c("Alice", "Bob", "Charlie", "David"),
+  Age = c(24, 30, 22, 25)
+)
+
+# The value in the 'Name' column to move to the first row
+desired_value <- "Charlie"
+
+# Find the index of the row with the desired value
+row_index <- match(desired_value, df$Name)
+
+# Reorder the rows
+new_order <- c(row_index, setdiff(1:nrow(df), row_index))
+df_reordered <- df[new_order, ]
+
+# View the reordered dataframe
+print(df_reordered)
+
+setdiff(1:nrow(df), row_index)
+
+row_index
+```
 
 
 

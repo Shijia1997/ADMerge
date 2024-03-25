@@ -93,6 +93,13 @@ ad_merge = function(path,
   # Merge
   ID_DATE = dict_src$ID_for_merge[grep(timeline_file, dict_src$file)]
   name_DATE = dict_src$DATE_for_merge[grep(timeline_file, dict_src$file)]
+  
+  timeline_index <- match(timeline_file, dict_src$file)
+  
+  new_order <- c(timeline_index, setdiff(1:nrow(dict_src), timeline_index))
+  
+  dict_src <- dict_src[new_order, ]
+  
   dat_list = dict_src$file
   if (DATE_type == "Date") {
     dat_all = key_ID %>%
