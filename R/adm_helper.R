@@ -322,13 +322,19 @@ get_window_bound = function(original_date,
                             is_left,
                             ovlp,
                             window_len) {
-  bound_date[is.na(bound_date)] = Sys.Date()-(Sys.Date()-window_len/2)
+  bound_date <- as.numeric(bound_date)
+  bound_date[is.na(bound_date)] = as.numeric(window_len / 2)
   if(ovlp) {
     return(original_date - is_left * window_len / 2)
   }
   else {
-    return(original_date - is_left * min(bound_date,
-                                         Sys.Date()-(Sys.Date()-window_len/2)))
+    
+    if(as.numeric(bound_date) >= as.numeric(window_len / 2)){
+      return(original_date - is_left * as.numeric(window_len / 2))
+    } else {
+      return(original_date - is_left * as.numeric(bound_date))
+    }
+    
   }
 }
 

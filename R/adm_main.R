@@ -126,6 +126,8 @@ ad_merge = function(path,
                    )
                  }))
         
+
+        
         if (DATE != name_DATE){dat_add = dat_all %>%
           group_by(ID_merged) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
@@ -186,7 +188,7 @@ ad_merge = function(path,
           arrange(diff, .by_group = T) %>%
           filter(row_number() == 1) %>%
           ungroup() %>%
-          select(-c("diff", "tem_date_left", "tem_date_right")) %>%
+          select(-c("diff", "tem_date_left", "tem_date_right"))%>%
           select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
@@ -242,13 +244,10 @@ ad_merge = function(path,
           distinct()
       }
       else { # longitudinal
-        print(dat_all)
         dat_tem = eval(as.name(dat)) %>%
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
                  !!as.name(DATE) := as.character(!!as.name(DATE))) 
         
-        print(DATE)
-        print(dat_tem)
         
           dat_all = dat_all %>%
             left_join(dat_tem,
