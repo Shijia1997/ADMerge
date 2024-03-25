@@ -80,10 +80,15 @@ ad_merge = function(path,
         filter(!is.na(DATE_for_merge))
       timeline_file = timeline_list$file[1]
     }
-    key_DATE = get_key_DATEs(dict_src,
-                             timeline_file,
-                             DATE_type)
+
   }
+  
+  key_DATE = get_key_DATEs(dict_src,
+                           timeline_file,
+                           DATE_type)
+  
+
+  
   cat("Keys generated. \n")
   # Merge
   ID_DATE = dict_src$ID_for_merge[grep(timeline_file, dict_src$file)]
@@ -161,7 +166,6 @@ ad_merge = function(path,
         
         
         } else if (DATE == name_DATE){
-          
           dat_add = dat_all %>%
           group_by(ID_merged) %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),

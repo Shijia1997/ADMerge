@@ -263,7 +263,7 @@ get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number"
         })) %>%
         na.omit() %>% 
         group_by(across(any_of(name_ID))) %>%
-        arrange(name_DATE, .by_group = T) %>%
+        arrange(!!as.name(name_DATE), .by_group = T) %>%
         mutate(date_left = (!!as.name(name_DATE) - lag(!!as.name(name_DATE))) / 2,
                date_right = lead(date_left))
     }
@@ -293,6 +293,7 @@ get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number"
   }
   
   return(key_DATE)
+
 }
 
 
@@ -317,7 +318,7 @@ get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number"
 #' get_window_bound("2021-01-01", "2022-01-01", is_left = TRUE, ovlp = TRUE, window_len = 365)
 #' }
 #'
-get_window_bound = function(original_date,
+get_window_bound = suppressWarnings(function(original_date,
                             bound_date,
                             is_left,
                             ovlp,
@@ -336,7 +337,7 @@ get_window_bound = function(original_date,
     }
     
   }
-}
+})
 
 
 

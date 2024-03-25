@@ -111,18 +111,18 @@ ad_data$analysis_data
 ```
 
 ```{r}
-
+MRIMETA_15Mar2024 %>% filter(RID == 40)
 ```
 
 
 ```{r}
-DXSUM_PDXCONV_21Mar2024 %>% filter(RID == 47)
+DXSUM_PDXCONV_21Mar2024 %>% filter(RID == 40)
 ```
 
 
 
 ```{r}
-MRIMETA_15Mar2024 %>% filter(RID == 15)
+MRIMETA_15Mar2024 %>% filter(RID == 40)
 ```
 
 
