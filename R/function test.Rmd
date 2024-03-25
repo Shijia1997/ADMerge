@@ -34,6 +34,11 @@ ad_data$analysis_data
 # key_ID = get_key_IDs(src_table)
 ```
 
+```{r}
+MOCA_15Feb2024 %>% filter(RID == 2)
+```
+
+
 # Testing for biocard internal validation
 ```{r}
 biocard_path = "BIOCARD August 2021 internal"
@@ -65,7 +70,7 @@ src_table
 
 ad_data = ad_merge(ADNI_path, DATE_type = "Date",dict_src = src_table,timeline_file = "MRIMETA_15Mar2024")
 
-ad_data$analysis_data %>% select(ID_merged,Date_timeline,ABETA42)
+ad_data$analysis_data
 
 ad_data$analysis_data$AB40
 ```
@@ -108,6 +113,13 @@ src_table = get_src_table(path = mri_diag_path,ID_pattern = "ID",DATE_pattern = 
 ad_data = ad_merge(mri_diag_path, DATE_type = "Date",dict_src = src_table,timeline_file = "MRIMETA_21Mar2024")
 
 ad_data$analysis_data 
+
+src_table
+
+# x, y same, x image time
+# 每个人是一条线，线上有点， multiple image per person.
+# 颜色 以diagnosis 为准 （3个）
+# 查一下变量，以scan date为准 join diagnosis
 ```
 
 ```{r}
