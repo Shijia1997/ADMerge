@@ -12,6 +12,7 @@ library(tidyverse)
 library(lubridate)
 source("adm_main.R")
 source("adm_helper.R")
+source("adm_summary.R")
 ```
 
 # Testing for Date input 
@@ -28,8 +29,15 @@ src_table
 
 ad_data = ad_merge(sample_path, DATE_type = "Date",dict_src = src_table)
 
+ad_data$analysis_data %>% filter(!is.na(FFLUENCY))
 
-ad_data$analysis_data
+ad_data$analysis_data$Phase
+
+
+summary.ADMerge_res(ad_data)
+
+plot.ADMerge_res(ad_data,"MMSCORE","Phase")
+
 # 
 # key_ID = get_key_IDs(src_table)
 ```

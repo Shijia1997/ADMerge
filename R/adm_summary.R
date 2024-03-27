@@ -18,7 +18,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
   ana_data = res$analysis_data
   dict_src = res$dict_src
   name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))[1]
-  pat = ana_data %>% distinct(!!as.name(name_ID), .keep_all = TRUE)
+  pat = ana_data %>% distinct(ID_merged, .keep_all = TRUE)
   n_pat = dim(pat)[1]
   n_var = dim(pat)[2]
   win_setting = dict_src %>%
@@ -62,10 +62,11 @@ plot.ADMerge_res = function(res,
   dict_src = res$dict_src
   name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))[1]
   plot_data <- ana_data %>%
-    select(!!as.name(name_ID), !!as.name(distn), !!as.name(group))
+    select(ID_merged, !!as.name(distn), !!as.name(group)) %>% 
+    mutate(!!as.name(group) := factor(!!as.name(group)))
   if (baseline) {
     plot_data <- plot_data %>%
-      distinct(!!as.name(name_ID), .keep_all = TRUE)
+      distinct(ID_merged, .keep_all = TRUE)
   }
   a_gen_tbl <- function(pat, group, distn) {
     info <- as.data.frame(pat %>%
