@@ -10,7 +10,7 @@ The ADMerge Package provides a function, `ad_merge()`, that merges data from var
 Use the following codes to install the ADMerge package
 ```R
 library(devtools)
-install_github("Thewhey-Brian/ADMerge")
+install_github("Shijia1997/ADMerge")
 library(ADMerge)
 ```
 For details about how to install a R package directly from GitHub: https://rdrr.io/cran/remotes/man/install_github.html.
