@@ -29,6 +29,9 @@
 #'
 #' @import tidyverse
 #'
+#' @import lubridate
+#' 
+#' 
 ad_merge = function(path,
                     DATE_type = c("Date", "Number"),
                     ...,
