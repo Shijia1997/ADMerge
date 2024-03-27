@@ -5,3 +5,5 @@
 "ADNI data/"
 sample_data/
 ADNI_Image_merge/
+.DS_Store
+.RData
