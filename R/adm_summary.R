@@ -9,6 +9,9 @@
 #' @return A summary of the ADMerge analysis results.
 #' @export
 #'
+#' @import ggplot2
+#' 
+#'
 #' @examples
 #' \dontrun{
 #' summary.ADMerge_res(res)
