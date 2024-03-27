@@ -1,9 +1,4 @@
 .xlsx
 .csv
-.Rmd
-"BIOCARD August 2021 internal/"
-"ADNI data/"
-sample_data/
-ADNI_Image_merge/
 .DS_Store
 .RData

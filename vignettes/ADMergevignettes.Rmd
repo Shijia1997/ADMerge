@@ -1,0 +1,37 @@
+---
+title: "An Introduction to ADMerge"
+author: "Shijia Zhang, Xinyu Guo, Zheyu Wang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{An Introduction to MyPackage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Introduction
+============
+
+ADMerge is tailored for aggregating Alzheimer’s Disease (AD) biomarker data. It equips users with functionality to integrate data from diverse AD-related sources into a cohesive analytical dataset. Additionally, the package includes built-in functions that assist in summarizing the input and merged data, as well as in visualizing the analytical dataset for enhanced insights. 
+
+
+
+```{r setup, include = FALSE}
+library(devtools)
+install_github("Shijia1997/ADMerge")
+library(ADMerge)
+
+```
+
+# Generating dictionary for data used to be merged example Biocard data
+
+```{r}
+Biocard_path = system.file("data/BIOCARD August 2021 internal", package = "ADMerge")
+
+
+
+src_table = get_src_table(path =sample_path,ID_pattern = "ID",DATE_pattern = "VIS")
+
+
+```
+
