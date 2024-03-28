@@ -325,6 +325,8 @@ get_window_bound = suppressWarnings(function(original_date,
                             ovlp,
                             window_len) {
   bound_date <- as.numeric(bound_date)
+  
+  
   bound_date[is.na(bound_date)] = as.numeric(window_len / 2)
   if(ovlp) {
     return(original_date - is_left * window_len / 2)

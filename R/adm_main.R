@@ -145,6 +145,7 @@ ad_merge = function(path,
         
         if (DATE != name_DATE){dat_add = dat_all %>%
           group_by(ID_merged) %>% 
+          ungroup() %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
@@ -178,6 +179,7 @@ ad_merge = function(path,
         } else if (DATE == name_DATE){
           dat_add = dat_all %>%
           group_by(ID_merged) %>% 
+          ungroup() %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
