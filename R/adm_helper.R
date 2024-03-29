@@ -333,11 +333,12 @@ get_window_bound = suppressWarnings(function(original_date,
   }
   else {
     
-    if(as.numeric(bound_date) >= as.numeric(window_len / 2)){
-      return(original_date - is_left * as.numeric(window_len / 2))
-    } else {
-      return(original_date - is_left * as.numeric(bound_date))
-    }
+    result = ifelse(as.numeric(bound_date) >= as.numeric(window_len / 2),
+           original_date - is_left * as.numeric(window_len / 2),
+           original_date - is_left * as.numeric(bound_date))
+    
+    return (result)
+    
     
   }
 })

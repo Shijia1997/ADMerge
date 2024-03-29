@@ -52,6 +52,14 @@ print(src_table)
 ```{r}
 biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
 
+biocard_merged$analysis_data
 
+
+```
+
+```{r}
+biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
+
+biocard_merged$analysis_data
 ```
 
