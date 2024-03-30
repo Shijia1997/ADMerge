@@ -319,29 +319,29 @@ get_key_DATEs = function(dict_src, timeline_file, DATE_type = c("Date", "Number"
 #' get_window_bound("2021-01-01", "2022-01-01", is_left = TRUE, ovlp = TRUE, window_len = 365)
 #' }
 #'
-# get_window_bound = suppressWarnings(function(original_date,
-#                             bound_date,
-#                             is_left,
-#                             ovlp,
-#                             window_len) {
-#   bound_date <- as.numeric(bound_date)
-#   
-#   
-#   bound_date[is.na(bound_date)] = as.numeric(window_len / 2)
-#   if(ovlp) {
-#     return(original_date - is_left * window_len / 2)
-#   }
-#   else {
-#     
-#     result = ifelse(as.numeric(bound_date) >= as.numeric(window_len / 2),
-#            original_date - is_left * as.numeric(window_len / 2),
-#            original_date - is_left * as.numeric(bound_date))
-#     
-#     return (result)
-#     
-#     
-#   }
-# })
+get_window_bound_1 = suppressWarnings(function(original_date,
+                            bound_date,
+                            is_left,
+                            ovlp,
+                            window_len) {
+  bound_date <- as.numeric(bound_date)
+  
+  
+  bound_date[is.na(bound_date)] = as.numeric(window_len / 2)
+  if(ovlp) {
+    return(original_date - is_left * window_len / 2)
+  }
+  else {
+    
+    result = ifelse(as.numeric(bound_date) >= as.numeric(window_len / 2),
+           original_date - is_left * as.numeric(window_len / 2),
+           original_date - is_left * as.numeric(bound_date))
+    
+    return (result)
+    
+    
+  }
+})
 
 
 
