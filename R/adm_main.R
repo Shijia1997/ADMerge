@@ -70,15 +70,6 @@ ad_merge = function(path,
     }
   }
   cat("dict_src generated. \n")
-  cat("Here")
-  cat("Here")
-  cat("Here")
-  cat("Here")
-  cat("Here")
-  cat("Here")
-  
-  cat("Here")
-  cat("Here")
   # Generate key ID data
   key_ID = get_key_IDs(dict_src)
 
