@@ -47,7 +47,6 @@ ad_merge = function(path,
                     ID_usr_list = NULL,
                     DATE_usr_list = NULL) {
   files_list = list.files(path, pattern = FILE_pattern)
-  print("Here")
   for (file_name in files_list) {
     dat = suppressWarnings(read_by_type(file_name, path))
     f_name = gsub(FILE_pattern, "", file_name) # file name
@@ -71,6 +70,7 @@ ad_merge = function(path,
     }
   }
   cat("dict_src generated. \n")
+  cat("Here")
   # Generate key ID data
   key_ID = get_key_IDs(dict_src)
 
