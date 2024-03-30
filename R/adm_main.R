@@ -47,6 +47,7 @@ ad_merge = function(path,
                     ID_usr_list = NULL,
                     DATE_usr_list = NULL) {
   files_list = list.files(path, pattern = FILE_pattern)
+  print("Here")
   for (file_name in files_list) {
     dat = suppressWarnings(read_by_type(file_name, path))
     f_name = gsub(FILE_pattern, "", file_name) # file name
@@ -145,7 +146,6 @@ ad_merge = function(path,
         
         if (DATE != name_DATE){dat_add = dat_all %>%
           group_by(ID_merged) %>% 
-          ungroup() %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
@@ -179,7 +179,6 @@ ad_merge = function(path,
         } else if (DATE == name_DATE){
           dat_add = dat_all %>%
           group_by(ID_merged) %>% 
-          ungroup() %>% 
           mutate(tem_date_left = get_window_bound(!!as.name(name_DATE),
                                                   date_left,
                                                   is_left = 1,
