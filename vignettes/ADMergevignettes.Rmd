@@ -26,8 +26,11 @@ biocard_path = "BIOCARD August 2021 internal"
 src_table = get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
 
 
-ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
+ad_data = ad_merge(biocard_path,dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
 
+ls(getNamespace("ADMerge"))
+
+getAnywhere(ad_merge)
 
 ```
 
