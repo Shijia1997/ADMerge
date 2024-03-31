@@ -33,7 +33,7 @@
 #' 
 #' 
 ad_merge = function(path,
-                    DATE_type
+                    DATE_type,
                     ...,
                     dict_src = NULL,
                     dict_src_path = NULL,
