@@ -1,0 +1,130 @@
+---
+title: "An Introduction to ADMerge"
+author: "Shijia Zhang, Xinyu Guo, Zheyu Wang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+ADMerge is tailored for aggregating Alzheimer’s Disease (AD) biomarker data. It equips users with functionality to integrate data from diverse AD-related sources into a cohesive analytical dataset. Additionally, the package includes built-in functions that assist in summarizing the input and merged data, as well as in visualizing the analytical dataset for enhanced insights. This package in designed to merge multiple sources from BIOCARD and ADNI studies datasets. This vignette demonstrate the usage of ADMerge joining datasets from Biocard study.
+
+
+## Installation
+
+The installation of package ADMerge is from github. requires devtools libaray.
+
+``` {r setup}
+library(devtools)
+install_github("Shijia1997/ADMerge")
+library(ADMerge)
+library(dplyr)
+```
+
+# Example merging datasets from Biocard study
+
+## Generating source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
+
+```{r}
+current_dir <- getwd()
+
+parent_dir <- dirname(current_dir)
+
+
+Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
+
+src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
+
+print(src_table)
+
+```
+
+### Explianation of usage
+
+* The Demographics and Genetics File were automatically identified as Non-longitudinal data because the software can't find date-related columns in those files.
+
+* Manual Specification: The determination of whether the file input is longitudinal can be manually specified using the input variable non_longitudinal_list. The file names in that variable are automatically considered as "Non-longitudinal" and will be joined solely based on the ID specified.
+
+* Priority Level for ID and Date/Visit Number: Users can specify the priority level for the software to determine the ID and Date/visit number using the regular expression default "DATE|VISITNO". The earlier inputs to the lists ID_user_list and Date_user_list will be considered a higher priority for joining.
+
+* Modifiable Source Table: The entire source table is a DataFrame object that can be modified directly in R, allowing users to specify their parameters.
+
+* Time Window Determination: The time window is determined by the window length (specified by the WINDOW column in the source structure table) and the overlap property (specified by the IS_overlap column in the source structure table).
+
+* Window Boundaries and Overlap: For each desired visit Ti, a time window is created by adding half of the window length (d) on both sides—[Ti - d, Ti + d]. If the overlap property is true, the window boundaries Ti-d and Ti+d will be compared with the middle points between the previous visit and current visit (Ti-1 + Ti)/2 and the middle points between the current visit and the latter visit (Ti + Ti+1)/2. The new window will then be modified to [max(Ti - d, (Ti-1 + Ti)/2), min(Ti + d, (Ti + Ti+1)/2)] to avoid using any biomarker measure multiple times.
+
+* Default Settings: The default for IS_overlap is False and the default for WINDOW is 366.
+
+## Manually modify the source table with determined priority of ID and Date for joining.
+
+```{r}
+src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
+
+print(src_table)
+```
+
+### Explianation of usage
+
+* Built-in Function for Joining: The package uses a built-in function to select the ID and Date for joining.
+
+* ID Priority: The input c("SUBJECT_ID", "JHUANONID") in ID_usr_list directs the package to prioritize "SUBJECT_ID" for joining. If "SUBJECT_ID" is not found in the data file variables, "JHUANONID" will be used as the second choice.
+
+* Date Priority: Same logic applies to the DATE_usr_list for date variables.
+
+* Source Table Modifiability: The entire source table (src_table) is a DataFrame object that can be directly modified in R, providing flexibility to the user.
+
+* Merging Based on Source Table: The file merging process is executed based on the specifications within the source table.
+
+## Merge the files under the Biocard Path
+
+```{r}
+biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02", DATE_type = "Date")
+
+merged_Biocard_data = biocard_merged$analysis_data
+
+print(merged_Biocard_data %>% head(5))
+```
+
+### Explianation of usage
+
+* Data Merging Process: Merged the Biocard data located in the Biocard data folder.
+
+* Timeline File Specification: Set "BIOCARD_CognitiveData_2021.11.02" as the timeline file, which is the cognitive data file.
+
+* Data Type Specification: Specified the data type as "Date", indicating that the files will be joined based on the date format present in each file.
+
+* Time Window for Joining: The joining process includes data within a specified time window, ensuring that only relevant data points are merged based on their dates.
+
+## Summary the merged result using the build in function
+
+```{r}
+summary(biocard_merged)
+```
+### Explanation of summary Function
+
+Call the build in function to summrise the merged result's meta data. Summarised result demostrate the number of participants in the timeline file, the number of variable in the final merged result. As for each datasets used for merging, the result showed the file name, merged window size and the whether the mergining allows overlap. 
+
+## Plot the merged result
+
+```{r}
+plot(biocard_merged,"LogMem1_B","SEX")
+```
+
+### Explanation of Plot Function
+
+The plot() function in ADMerge visualizes the relationships and distributions within the merged data. In this example, we use plot(biocard_merged, "LogMem1_B", "SEX") to display the distribution of logarithmic memory scores (LogMem1_B) across different sexes (SEX). This plot helps in identifying patterns or differences in memory scores between male and female participants in the Biocard study.
+
+# Conclusion
+
+In this vignette, we introduced the ADMerge package, demonstrated its installation, and walked through the process of merging and analyzing Alzheimer's Disease biomarker data, specifically from the Biocard study. The package facilitates the integration of diverse datasets, supports data analysis through built-in functions for summarizing and visualizing the data, and aids in the efficient examination of AD biomarker trends. By utilizing ADMerge, researchers can streamline their data preprocessing tasks and focus more effectively on their analytical objectives.
