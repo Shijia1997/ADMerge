@@ -37,6 +37,7 @@ getAnywhere(ad_merge)
 # Generating source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
+
 current_dir <- getwd()
 
 parent_dir <- dirname(current_dir)
@@ -61,7 +62,7 @@ print(src_table)
 ### From here we used build in function for the package to choose the ID and Date for Joining. The input c("SUBJECT_ID","JHUANONID") in ID_usr_list making the package finding "SUBJECT_ID" for join, if not found in the viariables of the data file, the package will choose "JHUANONID" as second choice. Same for the varaibles input in the DATE_usr_list. Agian the entire source table (scr_table) is a Dataframe Object and modifiable using R. The Merging of the file will be based on the source table.
 
 ```{r}
-biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
+biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02",DATE_type = "Date")
 
 biocard_merged$analysis_data
 

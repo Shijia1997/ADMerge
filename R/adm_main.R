@@ -31,6 +31,8 @@
 #'
 #' @import lubridate
 #' 
+#' @import stringr
+#' 
 #' 
 ad_merge = function(path,
                     DATE_type,
