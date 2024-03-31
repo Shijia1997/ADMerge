@@ -29,9 +29,6 @@ src_table = get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = 
 ad_data = ad_merge(biocard_path, DATE_type = "Date",dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02")
 
 
-ls("package:ADMerge")
-
-getAnywhere(get_window_bound)
 ```
 
 # Generating source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
@@ -65,6 +62,7 @@ biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BI
 
 biocard_merged$analysis_data
 
+## This issue still need to be fixed !!!! ( the input typec)
 
 ```
 
