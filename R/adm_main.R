@@ -33,6 +33,7 @@
 #' 
 #' @import stringr
 #' 
+#' @import stringi
 #' 
 ad_merge = function(path,
                     DATE_type,
