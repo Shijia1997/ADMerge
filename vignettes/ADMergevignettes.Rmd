@@ -22,6 +22,7 @@ library(devtools)
 install_github("Shijia1997/ADMerge")
 library(ADMerge)
 biocard_path = "BIOCARD August 2021 internal"
+library(tidyverse)
 
 src_table = get_src_table(path = biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
 
@@ -62,6 +63,7 @@ print(src_table)
 ### From here we used build in function for the package to choose the ID and Date for Joining. The input c("SUBJECT_ID","JHUANONID") in ID_usr_list making the package finding "SUBJECT_ID" for join, if not found in the viariables of the data file, the package will choose "JHUANONID" as second choice. Same for the varaibles input in the DATE_usr_list. Agian the entire source table (scr_table) is a Dataframe Object and modifiable using R. The Merging of the file will be based on the source table.
 
 ```{r}
+library(lubridate)
 biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02",DATE_type = "Date")
 
 biocard_merged$analysis_data
