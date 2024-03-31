@@ -144,8 +144,8 @@ ad_merge = function(path,
           mutate(!!as.name(ID) := as.character(!!as.name(ID)),
                  across(any_of(DATE), function(x) {
                    case_when(
-                     str_detect(x, "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(x, quiet = TRUE),
-                     str_detect(x, "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(x, quiet = TRUE),
+                     stringr::str_detect(x, "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(x, quiet = TRUE),
+                     stringr::str_detect(x, "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(x, quiet = TRUE),
                      TRUE ~ as.Date(NA)
                    )
                  }))
