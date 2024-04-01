@@ -30,6 +30,8 @@ library(devtools)
 install_github("Shijia1997/ADMerge")
 library(ADMerge)
 library(dplyr)
+library(knitr)
+library(kableExtra)
 ```
 
 # Example merging datasets from Biocard study
@@ -46,7 +48,8 @@ Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
 
 src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
 
-print(src_table)
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 
 ```
 
@@ -71,7 +74,9 @@ print(src_table)
 ```{r}
 src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
 
-print(src_table)
+
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 ### Explianation of usage
@@ -93,7 +98,8 @@ biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BI
 
 merged_Biocard_data = biocard_merged$analysis_data
 
-print(merged_Biocard_data %>% head(5))
+knitr::kable(merged_Biocard_data %>% head(5)) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 ### Explianation of usage
