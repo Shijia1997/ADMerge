@@ -1,0 +1,21 @@
+---
+title: "test_plot_github"
+author: "Shijia Zhang"
+date: "2024-04-09"
+output: html_document
+---
+
+```{r}
+library(devtools)
+install_github("Shijia1997/ADMerge")
+library(ADMerge)
+```
+
+```{r}
+data_path = "ADNI data"
+
+scr_table = get_src_table(path = data_path, ID_usr_list = ("RID"))
+
+plot.files(path = data_path, dict_src = scr_table)
+```
+

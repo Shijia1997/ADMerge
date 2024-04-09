@@ -1,0 +1,36 @@
+---
+title: "plot test"
+author: "Shijia Zhang"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r}
+source("adm_main.R")
+source("adm_helper.R")
+source("adm_summary.R")
+library(readxl)
+library(dplyr)
+library(plotly)
+library(htmlwidgets)
+library(RColorBrewer)
+```
+
+```{r}
+library(lubridate)
+path = "/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/BIOCARD August 2021 internal"
+
+src_table <- get_src_table(path = path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID"), , DATE_usr_list = c("date","VISITDATE","MRIDATE"))
+
+
+
+plot <- plot.files(path, FILE_pattern = ".xlsx|.xls|.csv", dict_src = src_table) 
+plot
+
+
+```
+
+
+
+
+

@@ -169,13 +169,71 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
   
-  p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
-               hoverinfo = 'text', # Display the hover text when hovering
-               text = ~hover_text, # Set the text that appears on hover
-               marker = list(size = 10, opacity = 0.6, color = ~color_value))
+  # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
+  #              hoverinfo = 'text', # Display the hover text when hovering
+  #              text = ~hover_text, # Set the text that appears on hover
+  #              marker = list(size = 10, opacity = 0.6, color = ~color_value))
+  
+  unique_types <- unique(combined_data$FILE)
+  
+  fig <- plot_ly()
+  
+  for (type in unique_types) {
+    fig <- fig %>% add_trace(
+      data = combined_data[combined_data$FILE == type, ],
+      x = ~DATE,
+      y = ~ID,
+      hoverinfo ="text",
+      name = type,
+      type = 'scatter',
+      text = ~hover_text,
+      mode = 'markers',
+      visible = TRUE,
+      marker = list(size = 10, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+    )
+  }
+  
+  # Generate dropdown items based on unique types
+  buttons <- lapply(seq_along(unique_types), function(i) {
+    list(
+      method = "restyle",
+      args = list("visible", lapply(seq_along(unique_types), function(j) i == j)),
+      label = unique_types[i]
+    )
+  })
+  
+  # Add an "All" button to the dropdown
+  all_button <- list(
+    method = "restyle",
+    args = list("visible", rep(TRUE, length(unique_types))),
+    label = "All"
+  )
+  
+  # Ensure "All" is the first button, making it the default selection
+  buttons <- c(list(all_button), buttons)
+  
+  fig <- fig %>% layout(
+    title = NULL,
+    xaxis = list(title = "TIME"),
+    yaxis = list(title = "ID"),
+    showlegend = FALSE, 
+    updatemenus = list(
+      list(
+        buttons = buttons,
+        direction = "down",
+        showlegend = FALSE,
+        pad = list(r = 10, t = 10),
+        showactive = TRUE,
+        x = 0.1,
+        xanchor = "left",
+        y = 1.1,
+        yanchor = "top"
+      )
+    )
+  )
   
   # Add a custom hover event to highlight the group (FILE)
-  p <- p %>% onRender("
+  js_code <-  "
 function(el) {
   var plotlyGraph = document.getElementById(el.id);
   
@@ -195,7 +253,7 @@ function(el) {
     // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
     data.points[0].fullData.x.forEach(function(_, i) {
       if(data.points[0].fullData.marker.color[i] === groupValue) {
-        opacities[i] = 1;
+        opacities[i] = 1.5;
       }
     });
     
@@ -209,18 +267,16 @@ function(el) {
     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
   });
 }
-")
+"
   
   # Customize the layout if desired
-  p <- p %>% layout(title = 'ID over Time by File',
-                    xaxis = list(title = 'Time'),
-                    yaxis = list(title = 'ID'),
-                    legend = list(orientation = 'h', x = 0, y = -0.3, xanchor = 'left', yanchor = 'bottom'),
-                    hovermode = 'closest')
+  
+  
+  fig <- fig %>% onRender(js_code)
   
   
   
-  return(p)
+  return(fig)
 }
 
 
