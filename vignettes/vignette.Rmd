@@ -27,7 +27,7 @@ The installation of package ADMerge is from github. requires devtools libaray.
 
 ``` {r setup}
 library(devtools)
-install_github("Shijia1997/ADMerge")
+install_github("Shijia1997/ADMerge", upgrade = "never")
 library(ADMerge)
 library(dplyr)
 library(knitr)
