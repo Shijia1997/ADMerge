@@ -373,7 +373,7 @@ function(el) {
     console.log('groupValue:', groupValue);
     
     // Create an array to set opacities
-    var opacities = new Array(data.points[0].fullData.x.length).fill(0.05); // Start with all opacities at 0.1
+    var opacities = new Array(data.points[0].fullData.x.length).fill(0.08); // Start with all opacities at 0.1
     
     // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
     data.points[0].fullData.x.forEach(function(_, i) {
@@ -388,7 +388,7 @@ function(el) {
   
   plotlyGraph.on('plotly_unhover', function(data) {
     // Reset the opacity for all points when not hovering
-    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.05); // Reset all opacities to 0.6
+    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.08); // Reset all opacities to 0.6
     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
   });
 }
