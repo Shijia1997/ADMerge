@@ -300,7 +300,7 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   unique_types <- unique(combined_data$FILE)
   
-  fig <- plot_ly(toWebGL = TRUE)
+  fig <- plot_ly()
   
   
   for (type in unique_types) {

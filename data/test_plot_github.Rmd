@@ -15,9 +15,16 @@ library(tidyr)
 ```{r}
 data_path = "ADNI data"
 
+scr_table = get_src_table(path = data_path, ID_usr_list = c("RID"),DATE_usr_list = c("VISDATE","EXAMDATE"))
 
-scr_table = get_src_table(path = data_path, ID_usr_list = ("RID"))
+print(scr_table)
+```
 
+Each file identified as longitudinal will be join with the their "ID_for_merge" as y-axis and "DATE_for_merge" as x-axis for visualization.
+
+By pass the source table into the "plot.files" function, we are able to visualize the distribution.
+
+```{r}
 plot.files(path = data_path, dict_src = scr_table)
 ```
 
