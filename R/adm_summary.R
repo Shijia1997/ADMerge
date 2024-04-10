@@ -17,6 +17,7 @@
 #' summary.ADMerge_res(res)
 #' }
 #'
+#'
 summary.ADMerge_res = function(res, vars = NULL, ...) {
   ana_data = res$analysis_data
   dict_src = res$dict_src
@@ -113,6 +114,7 @@ plot.ADMerge_res = function(res,
 #' @import htmlwidgets
 #' @import lubridate
 #' 
+#' @import tidyr
 #' 
 #' 
 
