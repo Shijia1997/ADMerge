@@ -12,7 +12,7 @@ export(read_by_type)
 export(plot.files)
 import(dplyr)
 importFrom(ggplot2, ggplot, geom_line, geom_point)  # Example functions from ggplot2
-importFrom(lubridate, date, dmy)  # Import only needed functions to avoid conflicts
+importFrom(lubridate, date, dmy, ymd)  # Import only needed functions to avoid conflicts
 importFrom(plotly, plot_ly)  # Assuming you use plot_ly
 importFrom(tidyr, spread, gather,drop_na)  # Example functions from tidyr
 importFrom(data.table, fread, fwrite,setDT)  # Only import specific data.table functions if necessary
