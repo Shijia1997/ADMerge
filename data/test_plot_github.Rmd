@@ -14,6 +14,7 @@ library(ADMerge)
 ```{r}
 data_path = "ADNI data"
 
+
 scr_table = get_src_table(path = data_path, ID_usr_list = ("RID"))
 
 plot.files(path = data_path, dict_src = scr_table)

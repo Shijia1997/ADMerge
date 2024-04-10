@@ -6,22 +6,28 @@ output: html_document
 ---
 
 ```{r}
-
+source("adm_helper.R")
+source("adm_main.R")
+source("adm_summary.R")
+library(dplyr)
+library(plotly)
+library(htmlwidgets)
+library(tidyr)
+library(data.table)
+library(readxl)
 ```
 
 ```{r}
 library(lubridate)
 path = "/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data"
 
-src_table <- get_src_table(path = path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID"), , DATE_usr_list = c("date","VISITDATE","MRIDATE"))
+src_table <- get_src_table(path = path, ID_pattern = "ID", ID_usr_list = c("RID"),DATE_usr_list = c("VISITDATE","MRIDATE"))
 
+src_table
 
+plot <- plot.files_w_dropdown(path, FILE_pattern = ".xlsx|.xls|.csv", dict_src = src_table) 
 
-plot <- plot.files(path, FILE_pattern = ".xlsx|.xls|.csv", dict_src = src_table) 
 plot
-MOCA_15Feb2024 %>%
-  filter(VISDATE == max(VISDATE))
-
 ```
 
 

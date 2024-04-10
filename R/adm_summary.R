@@ -114,6 +114,121 @@ plot.ADMerge_res = function(res,
 #' @import lubridate
 #' 
 #' 
+#' 
+
+
+# plot.files_no_dropdown <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL) {
+#   files_list <- list.files(path, pattern = FILE_pattern)
+#   
+#   # Load each file into the global environment
+#   for (file_name in files_list) {
+#     dat <- suppressWarnings(read_by_type(file_name, path))
+#     f_name <- gsub(FILE_pattern, "", file_name) # Clean file name
+#     assign(f_name, dat, envir = .GlobalEnv)
+#   }
+#   
+#   # Initialize an empty dataframe for the results
+#   combined_data <- data.frame(ID = character(), DATE = character(), FILE = character())
+#   
+#   dat_list <- dict_src$file
+#   
+#   for (data in dat_list) {
+#     idx <- grep(data, dict_src$file)
+#     if (length(idx) > 0) {
+#       ID_col <- dict_src$ID_for_merge[idx]
+#       DATE_col <- dict_src$DATE_for_merge[idx]
+#       
+#       dat_name <- gsub(FILE_pattern, "", data)
+#       dat_tem <- get(dat_name, envir = .GlobalEnv)
+#       
+#       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
+#         dat_tem <- dat_tem %>%
+#           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+#                  !!as.name(DATE_col) := case_when(
+#                    stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
+#                    stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
+#                    TRUE ~ as.Date(NA)
+#                  ),
+#                  FILE = as.character(data)) %>%
+#           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+#         
+#         # Combine with the previously collected data
+#         combined_data <- rbind(combined_data, dat_tem)
+#       }
+#     }
+#   }
+#   
+#   # Start plotting
+#   
+#   combined_data$DATE <- as.Date(combined_data$DATE)
+#   
+#   combined_data <- combined_data %>% mutate(color = as.factor(FILE))
+#   
+#   color_palette <- RColorBrewer::brewer.pal(length(unique(combined_data$color)), "Set1")
+#   
+#   color_map <- setNames(color_palette, levels(combined_data$color))
+#   
+#   combined_data <- combined_data %>% mutate(color_value = color_map[color])
+#   
+#   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
+#   
+#   p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scattergl', mode = 'markers',
+#                hoverinfo = 'text', # Display the hover text when hovering
+#                text = ~hover_text, # Set the text that appears on hover
+#                marker = list(size = 10, opacity = 0.6, color = ~color_value))
+#   
+#   # Add a custom hover event to highlight the group (FILE)
+#   p <- p %>% onRender("
+# function(el) {
+#   var plotlyGraph = document.getElementById(el.id);
+#   
+#   plotlyGraph.on('plotly_hover', function(data) {
+#     // Find the index of the hovered data point
+#     var hoverIndex = data.points[0].pointIndex;
+#     console.log('Hover index data:', hoverIndex);
+#     
+#     // Get the trace and group information for the hovered data point
+#     var traceIndex = data.points[0].curveNumber;
+#     var groupValue = data.points[0].fullData.marker.color[hoverIndex];
+#     console.log('groupValue:', groupValue);
+#     
+#     // Create an array to set opacities
+#     var opacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Start with all opacities at 0.1
+#     
+#     // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
+#     data.points[0].fullData.x.forEach(function(_, i) {
+#       if(data.points[0].fullData.marker.color[i] === groupValue) {
+#         opacities[i] = 1;
+#       }
+#     });
+#     
+#     // Restyle the plot with the updated opacities
+#     Plotly.restyle(el.id, {'marker.opacity': [opacities]}, [traceIndex]);
+#   });
+#   
+#   plotlyGraph.on('plotly_unhover', function(data) {
+#     // Reset the opacity for all points when not hovering
+#     var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.6
+#     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
+#   });
+# }
+# ")
+#   
+#   # Customize the layout if desired
+#   p <- p %>% layout(title = 'ID over Time by File',
+#                     xaxis = list(title = 'Time'),
+#                     yaxis = list(title = 'ID'),
+#                     legend = list(orientation = 'h', x = 0, y = -0.3, xanchor = 'left', yanchor = 'bottom'),
+#                     hovermode = 'closest')
+#   
+#   
+#   
+#   return(p)
+#   
+# 
+# }
+
+
 plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL) {
   files_list <- list.files(path, pattern = FILE_pattern)
   
@@ -159,6 +274,9 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   combined_data$DATE <- as.Date(combined_data$DATE)
   
+  combined_data <- combined_data %>% distinct() %>%
+    drop_na()
+  
   combined_data <- combined_data %>% mutate(color = as.factor(FILE))
   
   color_palette <- RColorBrewer::brewer.pal(length(unique(combined_data$color)), "Set1")
@@ -169,6 +287,9 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
   
+  setDT(combined_data)
+  
+  
   # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
   #              hoverinfo = 'text', # Display the hover text when hovering
   #              text = ~hover_text, # Set the text that appears on hover
@@ -176,7 +297,8 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   unique_types <- unique(combined_data$FILE)
   
-  fig <- plot_ly()
+  fig <- plot_ly(toWebGL = TRUE)
+  
   
   for (type in unique_types) {
     fig <- fig %>% add_trace(
@@ -185,7 +307,7 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       y = ~ID,
       hoverinfo ="text",
       name = type,
-      type = 'scatter',
+      type = 'scattergl',
       text = ~hover_text,
       mode = 'markers',
       visible = TRUE,
@@ -248,7 +370,7 @@ function(el) {
     console.log('groupValue:', groupValue);
     
     // Create an array to set opacities
-    var opacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Start with all opacities at 0.1
+    var opacities = new Array(data.points[0].fullData.x.length).fill(0.01); // Start with all opacities at 0.1
     
     // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
     data.points[0].fullData.x.forEach(function(_, i) {
@@ -263,21 +385,23 @@ function(el) {
   
   plotlyGraph.on('plotly_unhover', function(data) {
     // Reset the opacity for all points when not hovering
-    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.6
+    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.01); // Reset all opacities to 0.6
     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
   });
 }
 "
-  
-  # Customize the layout if desired
-  
-  
-  fig <- fig %>% onRender(js_code)
-  
-  
-  
-  return(fig)
+
+# Customize the layout if desired
+
+
+fig <- fig %>% onRender(js_code)
+
+
+
+return(fig)
 }
+
+
 
 
 
