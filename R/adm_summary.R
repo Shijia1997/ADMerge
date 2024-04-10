@@ -116,6 +116,7 @@ plot.ADMerge_res = function(res,
 #' 
 #' @import tidyr
 #' 
+#' @import data.table
 #' 
 
 
