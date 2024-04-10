@@ -388,7 +388,7 @@ function(el) {
   
   plotlyGraph.on('plotly_unhover', function(data) {
     // Reset the opacity for all points when not hovering
-    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.2); // Reset all opacities to 0.2
+    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.1
     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
   });
 }
