@@ -13,9 +13,10 @@ export(plot.files)
 import(dplyr)
 importFrom(ggplot2, ggplot, geom_line, geom_point)  # Example functions from ggplot2
 importFrom(lubridate, date, dmy, ymd)  # Import only needed functions to avoid conflicts
-importFrom(plotly, plot_ly, add_trace, layout, onRender)  # Assuming you use plot_ly
+importFrom(plotly, plot_ly, add_trace, layout)  # Assuming you use plot_ly
 importFrom(tidyr, spread, gather,drop_na)  # Example functions from tidyr
 importFrom(data.table, fread, fwrite,setDT)  # Only import specific data.table functions if necessary
 importFrom(stringr, str_replace, str_detect)  # Example functions from stringr
 importFrom(stringi, stri_detect, stri_replace)  # Example functions from stringi
 importFrom(readxl, read_excel)  # You've already specified this one correctly
+importFrom(htmlwidgets, onRender)
