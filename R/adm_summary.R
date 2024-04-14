@@ -235,87 +235,87 @@ plot.ADMerge_res = function(res,
 # }
 
 
-plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type) {
-  files_list <- list.files(path, pattern = FILE_pattern)
-  
-  # Load each file into the global environment
-  for (file_name in files_list) {
-    dat <- suppressWarnings(read_by_type(file_name, path))
-    f_name <- gsub(FILE_pattern, "", file_name) # Clean file name
-    assign(f_name, dat, envir = .GlobalEnv)
-  }
-  
-  # Initialize an empty dataframe for the results
-  combined_data <- data.frame(ID = character(), DATE = character(), FILE = character())
-  
-  dat_list <- dict_src$file
-  
-  for (data in dat_list) {
-    idx <- grep(data, dict_src$file)
-    if (length(idx) > 0) {
-      ID_col <- dict_src$ID_for_merge[idx]
-      DATE_col <- dict_src$DATE_for_merge[idx]
-      
-      dat_name <- gsub(FILE_pattern, "", data)
-      dat_tem <- get(dat_name, envir = .GlobalEnv)
-      
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE",study_type = "ADNI"){
-        
-        dat_tem <- dat_tem %>% 
-          mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                 !!as.name(DATE_col) := as.factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
-                                                  ordered = TRUE),
-                 FILE = as.character(data)) %>% 
-          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
-        combined_data <- rbind(combined_data, dat_tem)
-                 
-      }
-      
-      
-      else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
-        dat_tem <- dat_tem %>%
-          mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                 !!as.name(DATE_col) := case_when(
-                   stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
-                   stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
-                   TRUE ~ as.Date(NA)
-                 ),
-                 FILE = as.character(data)) %>%
-          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
-        
-        # Combine with the previously collected data
-        combined_data <- rbind(combined_data, dat_tem)
-      }
-    }
-  }
-  
-  # Start plotting
-  
-  combined_data$DATE <- as.Date(combined_data$DATE)
-  
-  combined_data <- combined_data %>% distinct() %>%
-    drop_na()
-  
-  combined_data <- combined_data %>% mutate(color = as.factor(FILE))
-  
-  color_palette <- RColorBrewer::brewer.pal(length(unique(combined_data$color)), "Set1")
-  
-  color_map <- setNames(color_palette, levels(combined_data$color))
-  
-  combined_data <- combined_data %>% mutate(color_value = color_map[color])
-  
-  combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
-  
-  combined_data$ID <- as.numeric(combined_data$ID)
-  
-  combined_data <- combined_data[order(combined_data$ID), ]
-  
-  setDT(combined_data)
-  
-  print(combined_data)
-  
-  return(combined_data)
-  
+# plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type) {
+#   files_list <- list.files(path, pattern = FILE_pattern)
+#   
+#   # Load each file into the global environment
+#   for (file_name in files_list) {
+#     dat <- suppressWarnings(read_by_type(file_name, path))
+#     f_name <- gsub(FILE_pattern, "", file_name) # Clean file name
+#     assign(f_name, dat, envir = .GlobalEnv)
+#   }
+#   
+#   # Initialize an empty dataframe for the results
+#   combined_data <- data.frame(ID = character(), DATE = character(), FILE = character())
+#   
+#   dat_list <- dict_src$file
+#   
+#   for (data in dat_list) {
+#     idx <- grep(data, dict_src$file)
+#     if (length(idx) > 0) {
+#       ID_col <- dict_src$ID_for_merge[idx]
+#       DATE_col <- dict_src$DATE_for_merge[idx]
+#       
+#       dat_name <- gsub(FILE_pattern, "", data)
+#       dat_tem <- get(dat_name, envir = .GlobalEnv)
+#       
+#       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE",study_type = "ADNI"){
+#         
+#         dat_tem <- dat_tem %>% 
+#           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+#                  !!as.name(DATE_col) := as.factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
+#                                                   ordered = TRUE),
+#                  FILE = as.character(data)) %>% 
+#           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+#         combined_data <- rbind(combined_data, dat_tem)
+#                  
+#       }
+#       
+#       
+#       else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
+#         dat_tem <- dat_tem %>%
+#           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+#                  !!as.name(DATE_col) := case_when(
+#                    stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
+#                    stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
+#                    TRUE ~ as.Date(NA)
+#                  ),
+#                  FILE = as.character(data)) %>%
+#           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+#         
+#         # Combine with the previously collected data
+#         combined_data <- rbind(combined_data, dat_tem)
+#       }
+#     }
+#   }
+#   
+#   # Start plotting
+#   
+#   combined_data$DATE <- as.Date(combined_data$DATE)
+#   
+#   combined_data <- combined_data %>% distinct() %>%
+#     drop_na()
+#   
+#   combined_data <- combined_data %>% mutate(color = as.factor(FILE))
+#   
+#   color_palette <- RColorBrewer::brewer.pal(length(unique(combined_data$color)), "Set1")
+#   
+#   color_map <- setNames(color_palette, levels(combined_data$color))
+#   
+#   combined_data <- combined_data %>% mutate(color_value = color_map[color])
+#   
+#   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
+#   
+#   combined_data$ID <- as.numeric(combined_data$ID)
+#   
+#   combined_data <- combined_data[order(combined_data$ID), ]
+#   
+#   setDT(combined_data)
+#   
+#   print(combined_data)
+#   
+#   return(combined_data)
+#   
   
 #   # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
 #   #              hoverinfo = 'text', # Display the hover text when hovering
