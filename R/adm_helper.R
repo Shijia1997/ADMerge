@@ -364,29 +364,25 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   for (data in dat_list) {
     idx <- grep(data, dict_src$file)
-    print("d")
     if (length(idx) > 0) {
       ID_col <- dict_src$ID_for_merge[idx]
       DATE_col <- dict_src$DATE_for_merge[idx]
       
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem <- get(dat_name, envir = .GlobalEnv)
-      print(DATE_col)
       
       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE" && study_type == "ADNI"){
-        print("b")
         
-        dat_tem <- dat_tem %>% 
+        dat_tem <- suppressWarnings(dat_tem %>% 
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
                  !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
                                                   ordered = TRUE),
                  FILE = as.character(data)) %>% 
-          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
         print(dat_tem)
         combined_data <- rbind(combined_data, dat_tem)
-        combined_data <- as.character(combined_data)
+        combined_data$DATE <- as.character(combined_data$DATE)
         
-        print("done")
         
       }
       
@@ -417,7 +413,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
  
   
-  combined_data <- combined_data %>% drop_na() %>%  distinct()
+  combined_data <- combined_data  %>%  distinct() %>% drop_na()
     
   
   combined_data <- combined_data %>% mutate(color = as.factor(FILE))
