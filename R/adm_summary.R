@@ -268,7 +268,7 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         # Check if the DATE_col is VISCODE and handle accordingly
         if (study_type == "ADNI" && DATE_col == "VISCODE") {
           dat_tem <- dat_tem %>%
-            mutate(VISCODE = factor(.[[DATE_col]], levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
+            mutate(!!as.name(DATE_col) = factor(.[[DATE_col]], levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
                                     ordered = TRUE))
         } else {
           dat_tem <- dat_tem %>%
