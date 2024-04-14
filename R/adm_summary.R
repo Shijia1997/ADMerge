@@ -80,16 +80,16 @@ plot.ADMerge_res = function(res,
       replace(., is.na(.), 0) %>%
       mutate(All = rowSums(across(where(is.numeric))))
     return(tbl)
-    print(plot_data)
   }
   tbl <- a_gen_tbl(plot_data, group, distn)
+  
   p <- ggplot(plot_data) +
     theme_bw() +
     geom_bar(aes(x = !!as.name(distn), color = !!as.name(group), fill = !!as.name(group)),
              position = 'stack', alpha = 0.9) +
     labs(x = distn, y = 'Number of Subjects', title = 'Participant Distribution') +
     theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
-  tbl
+  plot_data
 }
 
 
