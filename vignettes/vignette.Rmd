@@ -31,6 +31,7 @@ install_github("Shijia1997/ADMerge", upgrade = "never")
 library(ADMerge)
 library(dplyr)
 library(knitr)
+library(readxl)
 library(kableExtra)
 ```
 
@@ -74,11 +75,20 @@ knitr::kable(src_table) %>%
 ## Manually modify the source table with determined priority of ID and Date for joining.
 
 ```{r}
-src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"),IS_overlap_list = )
+src_table = get_src_table(path = Biocard_path, 
+			ID_pattern = "ID", 
+			ID_usr_list = c("SUBJECT_ID","JHUANONID"), 
+			DATE_usr_list = c("date","VISITDATE","MRIDATE"),
+			 IS_overlap_list = c(TRUE, TRUE, FALSE), 
+			   WINDOW_list = c(366, 732, 366))
+
 
 
 knitr::kable(src_table) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+src_table
 ```
 
 ### Explianation of usage
@@ -118,6 +128,8 @@ knitr::kable(merged_Biocard_data %>% head(5)) %>%
 
 ```{r}
 summary(biocard_merged)
+
+biocard_merged$analysis_data %>% filter(!is.na(LogMem1_B)) %>% distinct(VISITNO)
 ```
 ### Explanation of summary Function
 
@@ -126,8 +138,19 @@ Call the build in function to summrise the merged result's meta data. Summarised
 ## Plot the merged result
 
 ```{r}
-plot(biocard_merged,"LogMem1_B","SEX")
+biocard_merged$analysis_data <- biocard_merged$analysis_data %>% filter(VISITNO %in% c(2,3,5,7,9,6,4,10,8))
+plot(biocard_merged,"LogMem1_B","VISITNO")
 ```
+
+
+```{r}
+plot(biocard_merged,"LogMem1_B","VISITNO")
+```
+```{r}
+biocard_merged$analysis_data <- biocard_merged$analysis_data %>% filter(VISITNO %in% c(1))
+plot(biocard_merged,"LogMem1_B","VISITNO")
+```
+
 
 ### Explanation of Plot Function
 
