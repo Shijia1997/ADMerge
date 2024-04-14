@@ -259,7 +259,20 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE",study_type = "ADNI"){
+        
+        dat_tem <- dat_tem %>% 
+          mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+                 !!as.name(DATE_col) := as.factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
+                                                  ordered = TRUE),
+                 FILE = as.character(data)) %>% 
+          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+        combined_data <- rbind(combined_data, dat_tem)
+                 
+      }
+      
+      
+      else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
         dat_tem <- dat_tem %>%
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
                  !!as.name(DATE_col) := case_when(

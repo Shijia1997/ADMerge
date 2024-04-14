@@ -13,7 +13,7 @@ library(tidyr)
 ```
 
 ```{r}
-data_path = "ADNI data"
+data_path = "BIOCARD August 2021 internal"
 
 scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
 
@@ -30,7 +30,7 @@ By pass the source table into the "plot.files" function, we are able to visualiz
 The user are able to hang over their mouses to points in the plot to highlight the all the scatter belongs to that group (file) while the users can also use the dropdown bar to visualize each file indivudally
 
 ```{r}
-plot.files(path = data_path, dict_src = scr_table)
+plot.files(path = data_path, dict_src = scr_table, study_type = "ADNI")
 ```
 
 
