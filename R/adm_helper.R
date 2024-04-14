@@ -373,7 +373,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       print(DATE_col)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE" && study_type == "ADNI"){
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
         print("b")
         
         dat_tem <- dat_tem %>% 
@@ -407,11 +407,13 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         
       }
     }
+    
+    print("ok done")
   }
   
   # Start plotting
   
-  combined_data$DATE <- as.Date(combined_data$DATE)
+  combined_data$DATE <- as.character(combined_data$DATE)
   
   combined_data <- combined_data %>% distinct() %>%
     drop_na()
