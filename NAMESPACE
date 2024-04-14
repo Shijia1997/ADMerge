@@ -11,7 +11,7 @@ export(ordered_match)
 export(read_by_type)
 export(plot.files)
 import(dplyr)
-importFrom(ggplot2, ggplot, geom_line, geom_point,theme_bw,geom_bar)  # Example functions from ggplot2
+import(ggplot2)
 importFrom(lubridate, date, dmy, ymd)  # Import only needed functions to avoid conflicts
 importFrom(plotly, plot_ly, add_trace, layout)  # Assuming you use plot_ly
 importFrom(tidyr, spread, gather,drop_na)  # Example functions from tidyr
