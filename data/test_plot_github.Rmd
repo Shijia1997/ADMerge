@@ -13,7 +13,7 @@ library(tidyr)
 ```
 
 ```{r}
-data_path = "BIOCARD August 2021 internal"
+data_path = "ADNI data"
 
 scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
 

@@ -421,7 +421,7 @@ fig <- fig %>% onRender(js_code)
 
 
 
-return(fig)
+return(combined_data)
 }
 
 
