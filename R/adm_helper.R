@@ -417,8 +417,8 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
  
   
-  combined_data <- combined_data %>% distinct() %>%
-    drop_na()
+  combined_data <- combined_data %>% drop_na() %>%  distinct()
+    
   
   combined_data <- combined_data %>% mutate(color = as.factor(FILE))
   
