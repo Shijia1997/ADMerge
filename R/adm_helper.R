@@ -373,7 +373,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       print(DATE_col)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col == "VISCODE" && study_type == "ADNI"){
         print("b")
         
         dat_tem <- dat_tem %>% 
@@ -384,6 +384,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         print(dat_tem)
         combined_data <- rbind(combined_data, dat_tem)
+        combined_data <- as.character(combined_data)
         
         print("done")
         
@@ -404,6 +405,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         
         # Combine with the previously collected data
         combined_data <- rbind(combined_data, dat_tem)
+        combined_data$DATE <- as.Date(combined_data$DATE)
         
       }
     }
@@ -413,7 +415,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   # Start plotting
   
-  combined_data$DATE <- as.character(combined_data$DATE)
+ 
   
   combined_data <- combined_data %>% distinct() %>%
     drop_na()
