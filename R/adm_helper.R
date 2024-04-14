@@ -347,7 +347,18 @@ get_window_bound = suppressWarnings(function(original_date,
 
 
 
-plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type,date_type) {
+plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src,study_type,date_type) {
+  
+  if(!study_type %in% c("BiOCARD", "ADNI")) {
+    stop("Invalid study_type. Please enter 'BiOCARD' or 'ADNI'.")
+  }
+  
+  # Ensure that date_type is either "Date" or "Number"
+  if(!date_type %in% c("Date", "Number")) {
+    stop("Invalid date_type. Please enter 'Date' or 'Number'.")
+  }
+  
+  
   files_list <- list.files(path, pattern = FILE_pattern)
   
   # Load each file into the global environment
@@ -403,7 +414,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       }
       
       
-      else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
+      else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Date") {
         dat_tem <- dat_tem %>%
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
                  !!as.name(DATE_col) := case_when(
@@ -459,7 +470,8 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
 
   fig <- plot_ly()
 
-
+if (date_type == "Date" && study_type == "ADNI"){
+  
   for (type in unique_types) {
     fig <- fig %>% add_trace(
       data = combined_data[combined_data$FILE == type, ],
@@ -474,6 +486,161 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
     )
   }
+  
+  adni_phases <- list(
+    list(name = "ADNI 1", start = "2004-10-01", end = "2009-09-30", color = 'yellow'),
+    list(name = "ADNI GO", start = "2009-10-01", end = "2011-09-30", color = 'purple'),
+    list(name = "ADNI 2", start = "2011-10-01", end = "2016-09-30", color = 'green'),
+    list(name = "ADNI 3", start = "2016-10-01", end = "2022-12-31", color = 'red')
+  )
+  
+  
+  
+  for(phase in adni_phases) {
+    fig <- fig %>% layout(
+      shapes = list(
+        list(
+          type = 'rect',
+          # Convert to numeric Date for x-axis compatibility
+          x0 = as.numeric(as.Date(phase$start)),
+          x1 = as.numeric(as.Date(phase$end)),
+          y0 = 0,
+          y1 = 1,
+          xref = 'x',
+          yref = 'paper',
+          fillcolor = phase$color,
+          opacity = 0.3,
+          line = list(
+            width = 0
+          ),
+          layer = "below"
+        )
+      )
+    )
+  }
+  
+  
+  # Adding annotations for ADNI phases
+  for(phase in adni_phases) {
+    fig <- fig %>% layout(
+      annotations = list(
+        list(
+          x = mean(c(as.numeric(as.Date(phase$start)), as.numeric(as.Date(phase$end)))),
+          y = 1.05,
+          xref = 'x',
+          yref = 'paper',
+          text = phase$name,
+          showarrow = FALSE,
+          font = list(
+            family = "Arial, sans-serif",
+            size = 16,
+            color = "black"
+          )
+        )
+      )
+    )
+  }
+  
+  
+  
+}
+  
+  
+  
+  if (date_type == "Date" && study_type == "BIOCARD"){
+    
+    for (type in unique_types) {
+      fig <- fig %>% add_trace(
+        data = combined_data[combined_data$FILE == type, ],
+        x = ~DATE,
+        y = ~ID,
+        hoverinfo ="text",
+        name = type,
+        type = 'scattergl',
+        text = ~hover_text,
+        mode = 'markers',
+        visible = TRUE,
+        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+      )
+    }
+    
+    biocard_phases <- list(
+      list(name = "BIOCARD NIH Phase", start = "1995-01-01", end = "2005-12-31", color = 'blue'),
+      list(name = "BIOCARD Interruption", start = "2006-01-01", end = "2008-12-31", color = 'grey'),
+      list(name = "BIOCARD JHU Phase", start = "2009-01-01", end = "2014-12-31", color = 'purple') # End date is arbitrary; replace with actual end date if known
+    )
+    
+    
+    
+    for(phase in biocard_phases) {
+      fig <- fig %>% layout(
+        shapes = list(
+          list(
+            type = 'rect',
+            # Convert to numeric Date for x-axis compatibility
+            x0 = as.numeric(as.Date(phase$start)),
+            x1 = as.numeric(as.Date(phase$end)),
+            y0 = 0,
+            y1 = 1,
+            xref = 'x',
+            yref = 'paper',
+            fillcolor = phase$color,
+            opacity = 0.3,
+            line = list(
+              width = 0
+            ),
+            layer = "below"
+          )
+        )
+      )
+    }
+    
+    
+    # Adding annotations for ADNI phases
+    for(phase in biocard_phases) {
+      fig <- fig %>% layout(
+        annotations = list(
+          list(
+            x = mean(c(as.numeric(as.Date(phase$start)), as.numeric(as.Date(phase$end)))),
+            y = 1.05,
+            xref = 'x',
+            yref = 'paper',
+            text = phase$name,
+            showarrow = FALSE,
+            font = list(
+              family = "Arial, sans-serif",
+              size = 16,
+              color = "black"
+            )
+          )
+        )
+      )
+    }
+    
+    
+    
+  }
+  
+  
+  else if (date_type == "Number"){
+    
+    for (type in unique_types) {
+      fig <- fig %>% add_trace(
+        data = combined_data[combined_data$FILE == type, ],
+        x = ~DATE,
+        y = ~ID,
+        hoverinfo ="text",
+        name = type,
+        type = 'scattergl',
+        text = ~hover_text,
+        mode = 'markers',
+        visible = TRUE,
+        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+      )
+    }
+    
+  }
+
 
   # Generate dropdown items based on unique types
   buttons <- lapply(seq_along(unique_types), function(i) {
