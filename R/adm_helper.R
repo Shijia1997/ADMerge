@@ -371,7 +371,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2"),study_type = "ADNI"){
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
         
         dat_tem <- dat_tem %>% 
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),

@@ -185,25 +185,25 @@ In this vignette, we introduced the ADMerge package, demonstrated its installati
 ## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
-current_dir <- getwd()
-
-parent_dir <- dirname(current_dir)
-
-
-ADNI_path <- file.path(parent_dir, "data", "ADNI data")
-
-
-src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
-
-knitr::kable(src_table) %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
-
-
-src_table
-
-CDR <- fread("/Users/shijia.zhang/Downloads/CDR_14Apr2024.csv")
-
-CDR %>% distinct(RID,VISCODE)
+# current_dir <- getwd()
+# 
+# parent_dir <- dirname(current_dir)
+# 
+# 
+# ADNI_path <- file.path(parent_dir, "data", "ADNI data")
+# 
+# 
+# src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
+# 
+# knitr::kable(src_table) %>%
+#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+# 
+# 
+# src_table
+# 
+# CDR <- fread("/Users/shijia.zhang/Downloads/CDR_14Apr2024.csv")
+# 
+# CDR %>% distinct(RID,VISCODE)
 ```
 
 
@@ -211,22 +211,22 @@ CDR %>% distinct(RID,VISCODE)
 # Update the source table
 
 ```{r}
-src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
-
-ADNI_merged = ad_merge(path = ADNI_path, 
-		   DATE_type= "Number", 
-		   dict_src = src_table,
-		   timeline_file = "CDR_14Apr2024")
-
-
-CDR_14Apr2024 %>% filter(PHASE == "ADNI1")
+# src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+# 
+# ADNI_merged = ad_merge(path = ADNI_path, 
+# 		   DATE_type= "Number", 
+# 		   dict_src = src_table,
+# 		   timeline_file = "CDR_14Apr2024")
+# 
+# 
+# CDR_14Apr2024 %>% filter(PHASE == "ADNI1")
 ```
 
 
 ```{r}
-summary(ADNI_merged)
-plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
-
-ADNI_merged$analysis_data$DIAGNOSIS
+# summary(ADNI_merged)
+# plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
+# 
+# ADNI_merged$analysis_data$DIAGNOSIS
 ```
 
