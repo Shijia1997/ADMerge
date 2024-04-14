@@ -32,12 +32,15 @@ By pass the source table into the "plot.files" function, we are able to visualiz
 The user are able to hang over their mouses to points in the plot to highlight the all the scatter belongs to that group (file) while the users can also use the dropdown bar to visualize each file indivudally
 
 ```{r}
-plot.files(path = data_path, dict_src = scr_table, study_type = "ADNI")
+plot_files(path = data_path, dict_src = scr_table, study_type = "ADNI")
+
+scr_table
 ```
 
 
 ```{r}
 library(data.table)
+library(dplyr)
 
 item = fread("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data/ITEM.csv")
 
@@ -46,6 +49,7 @@ item %>% select(RID,VISCODE)
 item
 
 ADS <- fread("/Users/shijia.zhang/Downloads/ADSXLIST_13Apr2024.csv")
+
 
 ADS %>% select(RID,VISCODE,Phase) %>% filter(RID == "667")
 ```
@@ -58,5 +62,9 @@ upen_plasma %>% distinct(RID,VISCODE)
 desk <- fread("/Users/shijia.zhang/Downloads/DESIKANLAB_14Apr2024.csv")
 
 desk %>% distinct(RID)
+
+DXSUM_PDXCONV_21Mar2024 %>% select(RID,VISCODE,PHASE)
+
+
 ```
 
