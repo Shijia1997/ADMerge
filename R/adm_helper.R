@@ -347,7 +347,7 @@ get_window_bound = suppressWarnings(function(original_date,
 
 
 
-plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type) {
+plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type,date_type) {
   files_list <- list.files(path, pattern = FILE_pattern)
   
   # Load each file into the global environment
@@ -371,7 +371,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Number" && study_type == "ADNI"){
         
         dat_tem <- suppressWarnings(dat_tem %>% 
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
@@ -382,6 +382,20 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
                                                   ordered = TRUE),
                  FILE = as.character(data)) %>% 
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
+        combined_data <- rbind(combined_data, dat_tem)
+        combined_data$DATE <- as.character(combined_data$DATE)
+        
+        
+      }
+      
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Number" && study_type == "BIOCARD"){
+        
+        dat_tem <- suppressWarnings(dat_tem %>% 
+                                      mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+                                             !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("1", "2", "3", "4", "5", "6", "7","8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"),
+                                                                           ordered = TRUE),
+                                             FILE = as.character(data)) %>% 
+                                      select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.character(combined_data$DATE)
         

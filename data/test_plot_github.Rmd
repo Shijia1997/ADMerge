@@ -15,13 +15,13 @@ library(tidyr)
 ```{r}
 data_path = "ADNI data"
 
-scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE2"))
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISDATE","EXAMDATE","ADAS_ExamDate"))
 
 print(scr_table)
 
 
 
-ls("package:ADMerge")
+scr_table
 
 ```
 
