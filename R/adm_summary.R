@@ -262,24 +262,12 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
         dat_tem <- dat_tem %>%
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
+                 !!as.name(DATE_col) := case_when(
+                   stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
+                   stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
+                   TRUE ~ as.Date(NA)
+                 ),
                  FILE = as.character(data)) %>%
-          select(ID = !!as.name(ID_col), FILE)
-        
-        # Check if the DATE_col is VISCODE and handle accordingly
-        if (study_type == "ADNI" && DATE_col == "VISCODE") {
-          dat_tem <- dat_tem %>%
-            mutate(!!as.name(DATE_col) = factor(.[[DATE_col]], levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
-                                    ordered = TRUE))
-        } else {
-          dat_tem <- dat_tem %>%
-            mutate(!!as.name(DATE_col) := case_when(
-              stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
-              stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
-              TRUE ~ as.Date(NA)
-            ))
-        }
-        
-        dat_tem <- dat_tem %>%
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         
         # Combine with the previously collected data
