@@ -312,6 +312,8 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   setDT(combined_data)
   
+  print(combined_data)
+  
   
   # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
   #              hoverinfo = 'text', # Display the hover text when hovering
