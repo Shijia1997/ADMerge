@@ -382,7 +382,10 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
                                                   ordered = TRUE),
                  FILE = as.character(data)) %>% 
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+        print(dat_tem)
         combined_data <- rbind(combined_data, dat_tem)
+        
+        print("done")
         
       }
       
@@ -401,6 +404,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         
         # Combine with the previously collected data
         combined_data <- rbind(combined_data, dat_tem)
+        
       }
     }
   }
