@@ -9,6 +9,7 @@ export(get_src_table)
 export(get_window_bound)
 export(ordered_match)
 export(read_by_type)
+export(plot.files)
 import(dplyr)
 import(ggplot2)
 importFrom(lubridate, date, dmy, ymd)  # Import only needed functions to avoid conflicts
