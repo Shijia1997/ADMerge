@@ -60,7 +60,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 plot.ADMerge_res = function(res,
                             distn, # extend ...
                             group,
-                            baseline = TRUE,
+                            baseline = FALSE,
                             ...) {
   ana_data = res$analysis_data
   dict_src = res$dict_src
@@ -293,6 +293,10 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
   
+  combined_data$ID <- as.numeric(combined_data$ID)
+  
+  combined_data <- combined_data[order(combined_data$ID), ]
+  
   setDT(combined_data)
   
   
@@ -317,7 +321,7 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       text = ~hover_text,
       mode = 'markers',
       visible = TRUE,
-      marker = list(size = 10, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+      marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
     )
   }
   

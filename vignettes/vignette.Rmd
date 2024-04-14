@@ -37,7 +37,7 @@ library(kableExtra)
 
 # Example merging datasets from Biocard study
 
-## Generating source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
+## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
 current_dir <- getwd()
@@ -138,14 +138,33 @@ Call the build in function to summrise the merged result's meta data. Summarised
 ## Plot the merged result
 
 ```{r}
-biocard_merged$analysis_data <- biocard_merged$analysis_data %>% filter(VISITNO %in% c(2,3,5,7,9,6,4,10,8))
-plot(biocard_merged,"LogMem1_B","VISITNO")
+plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 ```
 
 
 ```{r}
-plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
+library(ggplot2)
+
+df = plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE) 
+
+
+  p <- ggplot(df) +
+    geom_bar(aes(x = "LogMem1_B", color = "VISITNO", fill = "VISITNO"),
+             position = 'stack', alpha = 0.9) +
+    labs(x = "LogMem1_B", y = 'Number of Subjects', title = 'Participant Distribution') +
+    theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
+  
+  
+ggplot(df, aes(x = LogMem1_B, fill = VISITNO)) +
+  geom_bar(stat = "count", position = "stack") +
+  scale_fill_brewer(palette = "Set1") +
+  labs(x = "LogMem1_B", y = "Count", fill = "VISITNO") +
+  theme_bw() +
+  theme(legend.position = "bottom")
 ```
+
+
+
 ```{r}
 biocard_merged$analysis_data <- biocard_merged$analysis_data %>% filter(VISITNO %in% c(1))
 plot(biocard_merged,"LogMem1_B","VISITNO")
@@ -159,3 +178,49 @@ The plot() function in ADMerge visualizes the relationships and distributions wi
 # Conclusion
 
 In this vignette, we introduced the ADMerge package, demonstrated its installation, and walked through the process of merging and analyzing Alzheimer's Disease biomarker data, specifically from the Biocard study. The package facilitates the integration of diverse datasets, supports data analysis through built-in functions for summarizing and visualizing the data, and aids in the efficient examination of AD biomarker trends. By utilizing ADMerge, researchers can streamline their data preprocessing tasks and focus more effectively on their analytical objectives.
+
+
+# Example merging dataset from ADNI study
+
+## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
+
+```{r}
+current_dir <- getwd()
+
+parent_dir <- dirname(current_dir)
+
+
+ADNI_path <- file.path(parent_dir, "data", "ADNI data")
+
+
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
+
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+src_table
+
+CDR <- fread("/Users/shijia.zhang/Downloads/CDR_14Apr2024.csv")
+
+CDR %>% distinct(RID,VISCODE)
+```
+
+
+
+# Update the source table
+
+```{r}
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+
+ADNI_merged = ad_merge(path = ADNI_path, 
+		   DATE_type= "Number", 
+		   dict_src = src_table,
+		   timeline_file = "CDR_14Apr2024")
+
+
+
+```
+
+
+
