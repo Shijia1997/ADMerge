@@ -13,16 +13,18 @@ library(tidyr)
 ```
 
 ```{r}
-data_path = "ADNI data"
+data_path = "BIOCARD August 2021 internal"
 
 scr_table = get_src_table(path = data_path, ID_usr_list = c("RID"),DATE_usr_list = c("VISDATE","EXAMDATE"))
 
 print(scr_table)
 ```
 
-Each file identified as longitudinal will be join with the their "ID_for_merge" as y-axis and "DATE_for_merge" as x-axis for visualization.
+Each file identified as longitudinal will be join with the their "ID_for_merge" as y-axis and "DATE_for_merge" as x-axis for visualization. The DATE_for_merge from different files are integrated to the same timeline
 
 By pass the source table into the "plot.files" function, we are able to visualize the distribution.
+
+The user are able to hang over their mouses to points in the plot to highlight the all the scatter belongs to that group (file) while the users can also use the dropdown bar to visualize each file indivudally
 
 ```{r}
 plot.files(path = data_path, dict_src = scr_table)

@@ -46,6 +46,8 @@ parent_dir <- dirname(current_dir)
 
 Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
 
+Biocard_path
+
 src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
 
 knitr::kable(src_table) %>%
@@ -72,7 +74,7 @@ knitr::kable(src_table) %>%
 ## Manually modify the source table with determined priority of ID and Date for joining.
 
 ```{r}
-src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
+src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID", ID_usr_list = c("SUBJECT_ID","JHUANONID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"),IS_overlap_list = )
 
 
 knitr::kable(src_table) %>%
