@@ -85,11 +85,13 @@ plot.ADMerge_res = function(res,
   
   p <- ggplot(plot_data) +
     theme_bw() +
-    geom_bar(aes(x = !!as.name(distn), color = !!as.name(group), fill = !!as.name(group)),
-             position = 'stack', alpha = 0.9) +
+    geom_bar(aes(x = !!as.name(distn),fill = !!as.name(group)),
+             stat = "count", position = "stack") +
+    scale_fill_brewer(palette = "Set1")+
     labs(x = distn, y = 'Number of Subjects', title = 'Participant Distribution') +
     theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
-  plot_data
+  
+  p
 }
 
 
