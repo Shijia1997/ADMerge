@@ -371,8 +371,8 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem <- get(dat_name, envir = .GlobalEnv)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && DATE_col %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
-        
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && as.character(DATE_col) %in% c("VISCODE","VISCODE2") && study_type == "ADNI"){
+        print("1")
         dat_tem <- dat_tem %>% 
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
                  !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
@@ -381,10 +381,12 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         combined_data <- rbind(combined_data, dat_tem)
         
+        
       }
       
       
       else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem)) {
+        print("2")
         dat_tem <- dat_tem %>%
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
                  !!as.name(DATE_col) := case_when(
