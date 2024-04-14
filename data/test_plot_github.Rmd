@@ -13,9 +13,9 @@ library(tidyr)
 ```
 
 ```{r}
-data_path = "BIOCARD August 2021 internal"
+data_path = "ADNI data"
 
-scr_table = get_src_table(path = data_path, ID_usr_list = c("RID"),DATE_usr_list = c("VISDATE","EXAMDATE"))
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
 
 print(scr_table)
 ```
@@ -28,5 +28,30 @@ The user are able to hang over their mouses to points in the plot to highlight t
 
 ```{r}
 plot.files(path = data_path, dict_src = scr_table)
+```
+
+
+```{r}
+library(data.table)
+
+item = fread("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data/ITEM.csv")
+
+item %>% select(RID,VISCODE)
+
+item
+
+ADS <- fread("/Users/shijia.zhang/Downloads/ADSXLIST_13Apr2024.csv")
+
+ADS %>% select(RID,VISCODE,Phase) %>% filter(RID == "667")
+```
+
+```{r}
+upen_plasma <- fread("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data/UPENNPLASMA_02Feb2024.csv")
+
+upen_plasma %>% distinct(RID,VISCODE)
+
+desk <- fread("/Users/shijia.zhang/Downloads/DESIKANLAB_14Apr2024.csv")
+
+desk %>% distinct(RID)
 ```
 
