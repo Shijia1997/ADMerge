@@ -314,117 +314,119 @@ plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   print(combined_data)
   
-  
-  # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
-  #              hoverinfo = 'text', # Display the hover text when hovering
-  #              text = ~hover_text, # Set the text that appears on hover
-  #              marker = list(size = 10, opacity = 0.6, color = ~color_value))
-  
-  unique_types <- unique(combined_data$FILE)
-  
-  fig <- plot_ly()
+  return(combined_data)
   
   
-  for (type in unique_types) {
-    fig <- fig %>% add_trace(
-      data = combined_data[combined_data$FILE == type, ],
-      x = ~DATE,
-      y = ~ID,
-      hoverinfo ="text",
-      name = type,
-      type = 'scattergl',
-      text = ~hover_text,
-      mode = 'markers',
-      visible = TRUE,
-      marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
-    )
-  }
-  
-  # Generate dropdown items based on unique types
-  buttons <- lapply(seq_along(unique_types), function(i) {
-    list(
-      method = "restyle",
-      args = list("visible", lapply(seq_along(unique_types), function(j) i == j)),
-      label = unique_types[i]
-    )
-  })
-  
-  # Add an "All" button to the dropdown
-  all_button <- list(
-    method = "restyle",
-    args = list("visible", rep(TRUE, length(unique_types))),
-    label = "All"
-  )
-  
-  # Ensure "All" is the first button, making it the default selection
-  buttons <- c(list(all_button), buttons)
-  
-  fig <- fig %>% layout(
-    title = NULL,
-    xaxis = list(title = "TIME"),
-    yaxis = list(title = "ID"),
-    showlegend = FALSE, 
-    updatemenus = list(
-      list(
-        buttons = buttons,
-        direction = "down",
-        showlegend = FALSE,
-        pad = list(r = 10, t = 10),
-        showactive = TRUE,
-        x = 0.1,
-        xanchor = "left",
-        y = 1.1,
-        yanchor = "top"
-      )
-    )
-  )
-  
-  # Add a custom hover event to highlight the group (FILE)
-  js_code <-  "
-function(el) {
-  var plotlyGraph = document.getElementById(el.id);
-  
-  plotlyGraph.on('plotly_hover', function(data) {
-    // Find the index of the hovered data point
-    var hoverIndex = data.points[0].pointIndex;
-    console.log('Hover index data:', hoverIndex);
-    
-    // Get the trace and group information for the hovered data point
-    var traceIndex = data.points[0].curveNumber;
-    var groupValue = data.points[0].fullData.marker.color[hoverIndex];
-    console.log('groupValue:', groupValue);
-    
-    // Create an array to set opacities
-    var opacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Start with all opacities at 0.1
-    
-    // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
-    data.points[0].fullData.x.forEach(function(_, i) {
-      if(data.points[0].fullData.marker.color[i] === groupValue) {
-        opacities[i] = 1.5;
-      }
-    });
-    
-    // Restyle the plot with the updated opacities
-    Plotly.restyle(el.id, {'marker.opacity': [opacities]}, [traceIndex]);
-  });
-  
-  plotlyGraph.on('plotly_unhover', function(data) {
-    // Reset the opacity for all points when not hovering
-    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.1
-    Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
-  });
-}
-"
-
-# Customize the layout if desired
-
-
-fig <- fig %>% onRender(js_code)
-
-
-
-return(combined_data)
-}
+#   # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
+#   #              hoverinfo = 'text', # Display the hover text when hovering
+#   #              text = ~hover_text, # Set the text that appears on hover
+#   #              marker = list(size = 10, opacity = 0.6, color = ~color_value))
+#   
+#   unique_types <- unique(combined_data$FILE)
+#   
+#   fig <- plot_ly()
+#   
+#   
+#   for (type in unique_types) {
+#     fig <- fig %>% add_trace(
+#       data = combined_data[combined_data$FILE == type, ],
+#       x = ~DATE,
+#       y = ~ID,
+#       hoverinfo ="text",
+#       name = type,
+#       type = 'scattergl',
+#       text = ~hover_text,
+#       mode = 'markers',
+#       visible = TRUE,
+#       marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+#     )
+#   }
+#   
+#   # Generate dropdown items based on unique types
+#   buttons <- lapply(seq_along(unique_types), function(i) {
+#     list(
+#       method = "restyle",
+#       args = list("visible", lapply(seq_along(unique_types), function(j) i == j)),
+#       label = unique_types[i]
+#     )
+#   })
+#   
+#   # Add an "All" button to the dropdown
+#   all_button <- list(
+#     method = "restyle",
+#     args = list("visible", rep(TRUE, length(unique_types))),
+#     label = "All"
+#   )
+#   
+#   # Ensure "All" is the first button, making it the default selection
+#   buttons <- c(list(all_button), buttons)
+#   
+#   fig <- fig %>% layout(
+#     title = NULL,
+#     xaxis = list(title = "TIME"),
+#     yaxis = list(title = "ID"),
+#     showlegend = FALSE, 
+#     updatemenus = list(
+#       list(
+#         buttons = buttons,
+#         direction = "down",
+#         showlegend = FALSE,
+#         pad = list(r = 10, t = 10),
+#         showactive = TRUE,
+#         x = 0.1,
+#         xanchor = "left",
+#         y = 1.1,
+#         yanchor = "top"
+#       )
+#     )
+#   )
+#   
+#   # Add a custom hover event to highlight the group (FILE)
+#   js_code <-  "
+# function(el) {
+#   var plotlyGraph = document.getElementById(el.id);
+#   
+#   plotlyGraph.on('plotly_hover', function(data) {
+#     // Find the index of the hovered data point
+#     var hoverIndex = data.points[0].pointIndex;
+#     console.log('Hover index data:', hoverIndex);
+#     
+#     // Get the trace and group information for the hovered data point
+#     var traceIndex = data.points[0].curveNumber;
+#     var groupValue = data.points[0].fullData.marker.color[hoverIndex];
+#     console.log('groupValue:', groupValue);
+#     
+#     // Create an array to set opacities
+#     var opacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Start with all opacities at 0.1
+#     
+#     // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
+#     data.points[0].fullData.x.forEach(function(_, i) {
+#       if(data.points[0].fullData.marker.color[i] === groupValue) {
+#         opacities[i] = 1.5;
+#       }
+#     });
+#     
+#     // Restyle the plot with the updated opacities
+#     Plotly.restyle(el.id, {'marker.opacity': [opacities]}, [traceIndex]);
+#   });
+#   
+#   plotlyGraph.on('plotly_unhover', function(data) {
+#     // Reset the opacity for all points when not hovering
+#     var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.1
+#     Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
+#   });
+# }
+# "
+# 
+# # Customize the layout if desired
+# 
+# 
+# fig <- fig %>% onRender(js_code)
+# 
+# 
+# 
+# return(combined_data)
+# }
 
 
 
