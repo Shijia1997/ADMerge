@@ -144,7 +144,7 @@ plot(biocard_merged,"LogMem1_B","VISITNO")
 
 
 ```{r}
-plot(biocard_merged,"LogMem1_B","VISITNO")
+plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 ```
 ```{r}
 biocard_merged$analysis_data <- biocard_merged$analysis_data %>% filter(VISITNO %in% c(1))

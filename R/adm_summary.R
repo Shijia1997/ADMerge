@@ -80,6 +80,7 @@ plot.ADMerge_res = function(res,
       replace(., is.na(.), 0) %>%
       mutate(All = rowSums(across(where(is.numeric))))
     return(tbl)
+    print(plot_data)
   }
   tbl <- a_gen_tbl(plot_data, group, distn)
   p <- ggplot(plot_data) +
