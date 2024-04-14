@@ -375,7 +375,10 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         
         dat_tem <- suppressWarnings(dat_tem %>% 
           mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                 !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("sc", "m06", "m12", "m18", "m24", "m36", "m48", "m60", "m72"),
+                 !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("bl", "sc","m06", "m12", "uns1", "m36", "m18", "m24", "m48", "m60", "m72",
+                                                                           "m84", "m96", "m108", "m120", "m132", "m54", "m66", "m78", "m126",
+                                                                          "m42", "m138", "m144", "m90", "m150", "m102", "m156", "m162", "", 
+                                                                          "m30", "m168", "m114", "m174", "m180", "m186", "m192", "m198", "m204"),
                                                   ordered = TRUE),
                  FILE = as.character(data)) %>% 
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
