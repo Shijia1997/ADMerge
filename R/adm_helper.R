@@ -347,7 +347,7 @@ get_window_bound = suppressWarnings(function(original_date,
 
 
 
-plot.files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type) {
+plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL,study_type) {
   files_list <- list.files(path, pattern = FILE_pattern)
   
   # Load each file into the global environment

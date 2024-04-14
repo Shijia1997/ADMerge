@@ -219,8 +219,14 @@ ADNI_merged = ad_merge(path = ADNI_path,
 		   timeline_file = "CDR_14Apr2024")
 
 
-
+CDR_14Apr2024 %>% filter(PHASE == "ADNI1")
 ```
 
 
+```{r}
+summary(ADNI_merged)
+plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
+
+ADNI_merged$analysis_data$DIAGNOSIS
+```
 
