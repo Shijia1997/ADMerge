@@ -15,7 +15,7 @@ library(tidyr)
 ```{r}
 data_path = "ADNI data"
 
-scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE2"))
 
 print(scr_table)
 
@@ -52,6 +52,14 @@ ADS <- fread("/Users/shijia.zhang/Downloads/ADSXLIST_13Apr2024.csv")
 
 
 ADS %>% select(RID,VISCODE,Phase) %>% filter(RID == "667")
+
+DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(VISCODE == "m06")
+
+DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(VISCODE == "v01") %>% dplyr::select(RID,PHASE,VISCODE)
+
+DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(PHASE == "ADNI2")
+
+unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
 ```
 
 ```{r}
@@ -63,8 +71,8 @@ desk <- fread("/Users/shijia.zhang/Downloads/DESIKANLAB_14Apr2024.csv")
 
 desk %>% distinct(RID)
 
-DXSUM_PDXCONV_21Mar2024 %>% select(RID,VISCODE,PHASE)
+DXSUM_PDXCONV_21Mar2024 %>% dplyr::select(RID,VISCODE2,PHASE) %>% dplyr::filter(RID == 2)
 
-
+unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
 ```
 
