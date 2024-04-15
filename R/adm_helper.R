@@ -625,20 +625,20 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
              x0 = "1995-01-01", x1 = "2005-12-31", xref = "x",
-             y0 = -0.03, y1 = -0.05, yref = "paper"),
+             y0 = -0.035, y1 = -0.055, yref = "paper"),
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
              x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -0.05, y1 = -0.07, yref = "paper"),
+             y0 = -0.055, y1 = -0.075, yref = "paper"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
              x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -0.07, y1 = -0.09, yref = "paper")
+             y0 = -0.075, y1 = -0.095, yref = "paper")
       ),
       annotations = list(
         list(
           x = "2000-07-01", 
-          y = -0.04, 
+          y = -0.045, 
           xref = 'x',
           yref = 'paper',
           text = "NIH Phase",
@@ -653,7 +653,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2007-07-01", 
-          y = -0.06, 
+          y = -0.065, 
           xref = 'x',
           yref = 'paper',
           text = "Interruption",
@@ -668,7 +668,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = -0.08, 
+          y = -0.085, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
@@ -736,9 +736,9 @@ if (date_type == "Date" && study_type == "ADNI"){
   fig <- fig %>% layout(
     title = list(
       text = t,
-      x = 0.1  
+      x = 0.7  
     ),
-    xaxis = list(title = "TIME"),
+    xaxis = list(title = ""),
     yaxis = list(title = "ID"),
     showlegend = FALSE,
     updatemenus = list(
