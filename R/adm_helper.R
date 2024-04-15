@@ -638,7 +638,7 @@ if (date_type == "Date" && study_type == "ADNI"){
       annotations = list(
         list(
           x = "2000-07-01", 
-          y = -0.06, 
+          y = -0.063, 
           xref = 'x',
           yref = 'paper',
           text = "NIH Phase",
@@ -652,7 +652,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2007-07-01", 
-          y = -0.08, 
+          y = -0.083, 
           xref = 'x',
           yref = 'paper',
           text = "Interruption",
@@ -666,7 +666,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = -0.1, 
+          y = -0.13, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
