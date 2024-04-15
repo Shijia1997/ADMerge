@@ -517,7 +517,7 @@ if (date_type == "Date" && study_type == "ADNI"){
              y0 = -800, y1 = -1000, yref = "y"),
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.2,
-             x0 = "2023-01-09", x1 = "2027-07-31", xref = "x",
+             x0 = "2023-12-31", x1 = "2027-07-31", xref = "x",
              y0 = -1000, y1 = -1200, yref = "y")),
       
       annotation = list(
