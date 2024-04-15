@@ -54,6 +54,16 @@ scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "V
 plot_files(path = data_path, dict_src = scr_table, study_type = "BIOCARD",date_type = "Date")
 ```
 
+```{r}
+data_path = "BIOCARD August 2021 internal"
+
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE", ID_usr_list = c("SUBJECT_ID"), DATE_usr_list = c("VISITNO"))
+
+scr_table
+
+
+plot_files(path = data_path, dict_src = scr_table, study_type = "BIOCARD",date_type = "Number")
+```
 
 
 
@@ -93,5 +103,7 @@ desk %>% distinct(RID)
 DXSUM_PDXCONV_21Mar2024 %>% dplyr::select(RID,VISCODE2,PHASE) %>% dplyr::filter(RID == 2)
 
 unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
+
+PTDEMOG_24Mar2024 %>% dplyr::filter(PHASE == "ADNI4")
 ```
 

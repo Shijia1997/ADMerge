@@ -521,8 +521,8 @@ if (date_type == "Date" && study_type == "ADNI"){
              y0 = -1000, y1 = -1200, yref = "y")),
       
       annotation = list(
-        list((
-          x = "2007-10-01",
+        list(
+          x = "2007-10-01", 
           y = -100, 
           xref = 'x',
           yref = 'y',
@@ -535,7 +535,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           ),
           bgcolor = "white",
           opacity = 0.6
-        ))
+        )
       )
     )
   }
