@@ -349,8 +349,8 @@ get_window_bound = suppressWarnings(function(original_date,
 
 plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src,study_type,date_type) {
   
-  if(!study_type %in% c("BiOCARD", "ADNI")) {
-    stop("Invalid study_type. Please enter 'BiOCARD' or 'ADNI'.")
+  if(!study_type %in% c("BIOCARD", "ADNI")) {
+    stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
   }
   
   # Ensure that date_type is either "Date" or "Number"

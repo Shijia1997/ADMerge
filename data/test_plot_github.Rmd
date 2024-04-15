@@ -12,16 +12,13 @@ library(ADMerge)
 library(tidyr)
 ```
 
+# ADNI date
+
 ```{r}
-data_path = "ADNI data"
+data_path = "ADNI date"
 
-scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISDATE","EXAMDATE","ADAS_ExamDate"))
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE", ID_usr_list = c("RID"), DATE_usr_list = c("VISDATE","EXAMDATE"))
 
-print(scr_table)
-
-
-
-scr_table
 
 ```
 
@@ -32,10 +29,32 @@ By pass the source table into the "plot.files" function, we are able to visualiz
 The user are able to hang over their mouses to points in the plot to highlight the all the scatter belongs to that group (file) while the users can also use the dropdown bar to visualize each file indivudally
 
 ```{r}
-plot_files(path = data_path, dict_src = scr_table, study_type = "ADNI")
+plot_files(path = data_path, dict_src = scr_table, study_type = "ADNI",date_type = "Date")
 
 scr_table
 ```
+
+```{r}
+data_path = "ADNI visnumbr"
+
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE", ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"),non_longitudinal_list = c("DESIKANLAB_14Apr2024"))
+
+plot_files(path = data_path, dict_src = scr_table, study_type = "ADNI",date_type = "Number")
+```
+
+
+# Biocard Date
+
+```{r}
+data_path = "BIOCARD August 2021 internal"
+
+scr_table = get_src_table(path = data_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE", ID_usr_list = c("SUBJECT_ID"), DATE_usr_list = c("date","VISITDATE","MRIDATE"))
+
+
+plot_files(path = data_path, dict_src = scr_table, study_type = "BIOCARD",date_type = "Date")
+```
+
+
 
 
 ```{r}
