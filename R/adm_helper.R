@@ -638,14 +638,14 @@ if (date_type == "Date" && study_type == "ADNI"){
       annotations = list(
         list(
           x = "2000-07-01", 
-          y = -0.055, 
+          y = -0.06, 
           xref = 'x',
           yref = 'paper',
           text = "NIH Phase",
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 10,
+            size = 9,
             color = "black"
           ),
           bgcolor = "blue",
@@ -653,14 +653,14 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2007-07-01", 
-          y = -0.075, 
+          y = -0.08, 
           xref = 'x',
           yref = 'paper',
           text = "Interruption",
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 10,
+            size = 9,
             color = "black"
           ),
           bgcolor = "grey",
@@ -668,14 +668,14 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = -0.095, 
+          y = -0.1, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 10,
+            size = 9,
             color = "black"
           ),
           bgcolor = "purple",
@@ -736,7 +736,7 @@ if (date_type == "Date" && study_type == "ADNI"){
   fig <- fig %>% layout(
     title = list(
       text = t,
-      x = 0.7  
+      x = 0.9  
     ),
     xaxis = list(title = ""),
     yaxis = list(title = "ID"),

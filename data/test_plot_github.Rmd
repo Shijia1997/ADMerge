@@ -31,7 +31,6 @@ The user are able to hang over their mouses to points in the plot to highlight t
 ```{r}
 plot_files(path = data_path, dict_src = scr_table, study_type = "ADNI",date_type = "Date")
 
-scr_table
 ```
 
 ```{r}
@@ -107,7 +106,8 @@ unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
 library(readxl)
 
 biocard_data = read_excel("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/BIOCARD August 2021 internal/BIOCARD_CognitiveData_2021.11.02.xlsx")
+library(dplyr)
 
-biocard_data %>% filter(Source == "NIH") %>% filter(VISITDATE = min(VISITDATE))
+
 ```
 
