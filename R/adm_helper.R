@@ -542,7 +542,7 @@ if (date_type == "Date" && study_type == "ADNI"){
             color = "black"
           ),
           showarrow = FALSE,
-          bgcolor = "purple",
+          bgcolor = "white",
           opacity = 0.7
         ),
         list(
@@ -557,7 +557,7 @@ if (date_type == "Date" && study_type == "ADNI"){
             color = "black"
           ),
           showarrow = FALSE,
-          bgcolor = "green",
+          bgcolor = "white",
           opacity = 0.7
         ),
         list(
@@ -572,7 +572,7 @@ if (date_type == "Date" && study_type == "ADNI"){
             color = "black"
           ),
           showarrow = FALSE,
-          bgcolor = "red",
+          bgcolor = "white",
           opacity = 0.7
         ),
         list(
@@ -587,7 +587,7 @@ if (date_type == "Date" && study_type == "ADNI"){
             color = "black"
           ),
           showarrow = FALSE,
-          bgcolor = "blue",
+          bgcolor = "white",
           opacity = 0.7
         )
       )
