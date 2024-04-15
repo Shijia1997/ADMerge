@@ -401,15 +401,25 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       
       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Number" && study_type == "BIOCARD"){
         
-        dat_tem <- suppressWarnings(dat_tem %>% 
-                                      mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                                             !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("1", "2", "3", "4", "5", "6", "7","8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"),
-                                                                           ordered = TRUE),
-                                             FILE = as.character(data)) %>% 
-                                      mutate(!!as.name(DATE_col) := as.numeric(as.character(.[[DATE_col]])))%>% 
-                                      arrange(!!as.name(DATE_col)) %>%
-                                      mutate(!!as.name(DATE_col) := factor(.[[DATE_col]], levels = unique(.[[DATE_col]]), ordered = TRUE)) %>% 
-                                      select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
+        dat_tem <- suppressWarnings(
+          dat_tem %>%
+            mutate(
+              !!as.name(ID_col) := as.character(.[[ID_col]]),
+              !!as.name(DATE_col) := as.character(.[[DATE_col]]),  # Keep it as character first
+              FILE = as.character(data)
+            ) %>%
+            mutate(
+              # Create a new 'DATE_vis' column with 'vis' labels
+              DATE_vis = paste("vis", !!as.name(DATE_col), sep = ""),
+              # Convert 'DATE_vis' to an ordered factor
+              DATE_vis = factor(DATE_vis, levels = paste("vis", c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"), sep = ""), ordered = TRUE)
+            ) %>%
+            select(
+              ID = !!as.name(ID_col),
+              DATE = DATE_vis,  # Use the new 'DATE_vis' column
+              FILE
+            )
+        )
         
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.character(combined_data$DATE)
