@@ -94,6 +94,33 @@ plot.ADMerge_res = function(res,
   p
 }
 
+complet_case.ADMerge_res <- function(res,check_cols){
+  df = data.frame(df$analysis_data)
+  
+  if (!all(check_cols %in% names(df))) {
+    stop("Please make sure input data is within the column")
+  }
+  
+  complete_cases_df <- df %>% filter(complete.cases(select(., check_cols)))
+  
+  follow_ups_per_patient <- complete_cases_df %>%
+    group_by(ID_merged) %>%
+    summarise(NumberOfFollowUps = n()) %>%
+    ungroup()
+  
+  plot <- ggplot(follow_ups_per_patient, aes(x = NumberOfFollowUps)) +
+    geom_bar() +
+    theme_minimal() +
+    labs(title = "Distribution of the Number of Visits for Complete Cases",
+         x = "Number of Visits",
+         y = "Frequency")
+  
+  
+  return(list(plot = plot, complete_df = complete_cases_df))
+  
+  
+  
+}
 
 
 #' Plot function for files used to merge

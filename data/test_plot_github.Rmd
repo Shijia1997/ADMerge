@@ -66,48 +66,5 @@ plot_files(path = data_path, dict_src = scr_table, study_type = "BIOCARD",date_t
 
 
 
-```{r}
-library(data.table)
-library(dplyr)
 
-item = fread("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data/ITEM.csv")
-
-item %>% select(RID,VISCODE)
-
-item
-
-ADS <- fread("/Users/shijia.zhang/Downloads/ADSXLIST_13Apr2024.csv")
-
-
-ADS %>% select(RID,VISCODE,Phase) %>% filter(RID == "667")
-
-DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(VISCODE == "m06")
-
-DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(VISCODE == "v01") %>% dplyr::select(RID,PHASE,VISCODE)
-
-DXSUM_PDXCONV_21Mar2024 %>% dplyr::filter(PHASE == "ADNI2")
-
-unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
-```
-
-```{r}
-upen_plasma <- fread("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/ADNI data/UPENNPLASMA_02Feb2024.csv")
-
-upen_plasma %>% distinct(RID,VISCODE)
-
-desk <- fread("/Users/shijia.zhang/Downloads/DESIKANLAB_14Apr2024.csv")
-
-desk %>% distinct(RID)
-
-DXSUM_PDXCONV_21Mar2024 %>% dplyr::select(RID,VISCODE2,PHASE) %>% dplyr::filter(RID == 2)
-
-unique(DXSUM_PDXCONV_21Mar2024$VISCODE2)
-
-library(readxl)
-
-biocard_data = read_excel("/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/BIOCARD August 2021 internal/BIOCARD_CognitiveData_2021.11.02.xlsx")
-library(dplyr)
-
-
-```
 
