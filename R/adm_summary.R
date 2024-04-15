@@ -57,7 +57,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 #'
 #' @import ggplot2
 #'
-complete_case.ADMerge_res <- function(res, check_cols) {
+review_complete <- function(res, check_cols) {
   df <- data.frame(res$analysis_data) # Assuming analysis_data is a list or dataframe within res
   
   if (!all(check_cols %in% names(df))) {
@@ -80,7 +80,6 @@ complete_case.ADMerge_res <- function(res, check_cols) {
   return(list(plot = plot, complete_df = complete_cases_df))
 }
 
-S3method(complete_case, ADMerge_res)
 
 #' Plot function for files used to merge
 #'
