@@ -514,7 +514,7 @@ if (date_type == "Date" && study_type == "ADNI"){
              x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
              y0 = -1000, y1 = -1200, yref = "y")),
       
-      annotation = list(
+      annotations = list(
         list(
           x = "2007-10-01", 
           y = -300, 
