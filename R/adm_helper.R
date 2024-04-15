@@ -514,20 +514,80 @@ if (date_type == "Date" && study_type == "ADNI"){
              x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
              y0 = -1000, y1 = -1200, yref = "y")),
       
-      annotations = list(
+      annotations = annotations = list(
         list(
-          x = "2007-10-01", 
-          y = -300, 
+          x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01")) / 2),
+          y = -300,
           xref = 'x',
           yref = 'y',
-          text = "ADNI1",
+          text = "ADNI 1",
           font = list(
             family = "Arial, sans-serif",
-            size = 14,
+            size = 12,
             color = "black"
           ),
           showarrow = FALSE,
           bgcolor = "white",
+          opacity = 0.7
+        ),
+        list(
+          x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01")) / 2),
+          y = -500,
+          xref = 'x',
+          yref = 'y',
+          text = "ADNI GO",
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "black"
+          ),
+          showarrow = FALSE,
+          bgcolor = "purple",
+          opacity = 0.7
+        ),
+        list(
+          x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01")) / 2),
+          y = -700,
+          xref = 'x',
+          yref = 'y',
+          text = "ADNI 2",
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "black"
+          ),
+          showarrow = FALSE,
+          bgcolor = "green",
+          opacity = 0.7
+        ),
+        list(
+          x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01")) / 2),
+          y = -900,
+          xref = 'x',
+          yref = 'y',
+          text = "ADNI 3",
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "black"
+          ),
+          showarrow = FALSE,
+          bgcolor = "red",
+          opacity = 0.7
+        ),
+        list(
+          x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09")) / 2),
+          y = -1100,
+          xref = 'x',
+          yref = 'y',
+          text = "ADNI 4",
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "black"
+          ),
+          showarrow = FALSE,
+          bgcolor = "blue",
           opacity = 0.7
         )
       )
