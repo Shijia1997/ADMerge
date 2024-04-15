@@ -567,7 +567,7 @@ if (date_type == "Date" && study_type == "ADNI"){
     biocard_phases <- list(
       list(name = "BIOCARD NIH Phase", start = "1995-01-01", end = "2005-12-31", color = 'blue'),
       list(name = "BIOCARD Interruption", start = "2006-01-01", end = "2008-12-31", color = 'grey'),
-      list(name = "BIOCARD JHU Phase", start = "2009-01-01", end = "2014-12-31", color = 'purple') # End date is arbitrary; replace with actual end date if known
+      list(name = "BIOCARD JHU Phase", start = "2009-01-01", end = "2014-12-31", color = 'purple') 
     )
     
     
