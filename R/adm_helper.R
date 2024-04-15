@@ -487,16 +487,10 @@ if (date_type == "Date" && study_type == "ADNI"){
     )
   }
   
-  adni_phases <- list(
-    list(name = "ADNI 1", start = "2004-10-01", end = "2009-09-30", color = 'yellow'),
-    list(name = "ADNI GO", start = "2009-10-01", end = "2011-09-30", color = 'purple'),
-    list(name = "ADNI 2", start = "2011-10-01", end = "2016-09-30", color = 'green'),
-    list(name = "ADNI 3", start = "2016-10-01", end = "2022-12-31", color = 'red')
-  )
   
   
   
-  for(phase in adni_phases) {
+
     fig <- fig %>% layout(
       shapes = list(
         list(type = "rect",
@@ -530,7 +524,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         )
       )
     )
-  }
+  
   
   
   
