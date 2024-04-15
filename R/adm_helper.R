@@ -666,14 +666,14 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = -0.13, 
+          y = -0.1, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           opacity = 0.7
