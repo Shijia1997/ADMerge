@@ -629,11 +629,11 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
              x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -0.01, y1 = 0.02, yref = "paper"),
+             y0 = -0.01, y1 = -0.02, yref = "paper"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
              x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -0.02, y1 = 0.03, yref = "paper")
+             y0 = -0.02, y1 = -0.03, yref = "paper")
       ),
       annotations = list(
         list(
