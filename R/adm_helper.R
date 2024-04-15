@@ -625,20 +625,20 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
              x0 = "1995-01-01", x1 = "2005-12-31", xref = "x",
-             y0 =0, y1 = -0.01, yref = "paper"),
+             y0 = -2, y1 = -4, yref = "paper"),
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
              x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -0.01, y1 = -0.02, yref = "paper"),
+             y0 = -4, y1 = -6, yref = "paper"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
              x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -0.02, y1 = -0.03, yref = "paper")
+             y0 = -6, y1 = -8, yref = "paper")
       ),
       annotations = list(
         list(
           x = "2000-07-01", 
-          y = -0.005, 
+          y = -3, 
           xref = 'x',
           yref = 'paper',
           text = "NIH Phase",
@@ -646,14 +646,14 @@ if (date_type == "Date" && study_type == "ADNI"){
           font = list(
             family = "Arial, sans-serif",
             size = 12,
-            color = "white"
+            color = "black"
           ),
-          bgcolor = "blue",
+          bgcolor = "white",
           opacity = 0.7
         ),
         list(
           x = "2007-07-01", 
-          y = -0.015, 
+          y = -5, 
           xref = 'x',
           yref = 'paper',
           text = "Interruption",
@@ -661,14 +661,14 @@ if (date_type == "Date" && study_type == "ADNI"){
           font = list(
             family = "Arial, sans-serif",
             size = 12,
-            color = "white"
+            color = "black"
           ),
-          bgcolor = "grey",
+          bgcolor = "white",
           opacity = 0.7
         ),
         list(
           x = "2016-12-31", 
-          y = -0.025, 
+          y = -7, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
@@ -676,9 +676,9 @@ if (date_type == "Date" && study_type == "ADNI"){
           font = list(
             family = "Arial, sans-serif",
             size = 12,
-            color = "white"
+            color = "black"
           ),
-          bgcolor = "purple",
+          bgcolor = "white",
           opacity = 0.7
         )
       )
