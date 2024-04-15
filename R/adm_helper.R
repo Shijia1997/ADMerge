@@ -597,28 +597,6 @@ if (date_type == "Date" && study_type == "ADNI"){
   
   
   
-  # # Adding annotations for ADNI phases
-  # for(phase in adni_phases) {
-  #   fig <- fig %>% layout(
-  #     annotations = list(
-  #       list(
-  #         x = mean(c(as.numeric(as.Date(phase$start)), as.numeric(as.Date(phase$end)))),
-  #         y = 1.05,
-  #         xref = 'x',
-  #         yref = 'paper',
-  #         text = phase$name,
-  #         showarrow = FALSE,
-  #         font = list(
-  #           family = "Arial, sans-serif",
-  #           size = 16,
-  #           color = "black"
-  #         )
-  #       )
-  #     )
-  #   )
-  # }
-  
-  
   
 }
   
@@ -626,76 +604,71 @@ if (date_type == "Date" && study_type == "ADNI"){
   
   if (date_type == "Date" && study_type == "BIOCARD"){
     
-    for (type in unique_types) {
-      fig <- fig %>% add_trace(
-        data = combined_data[combined_data$FILE == type, ],
-        x = ~DATE,
-        y = ~ID,
-        hoverinfo ="text",
-        name = type,
-        type = 'scattergl',
-        text = ~hover_text,
-        mode = 'markers',
-        visible = TRUE,
-        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+    fig <- fig %>% layout(
+      shapes = list(
+        list(type = "rect",
+             fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
+             x0 = "1995-01-01", x1 = "2005-12-31", xref = "x",
+             y0 =-200, y1 = -400, yref = "paper"),
+        list(type = "rect",
+             fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
+             x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
+             y0 = -400, y1 = -600, yref = "paper"),
+        list(type = "rect",
+             fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
+             x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
+             y0 = -600, y1 = -800, yref = "paper")
+      ),
+      annotations = list(
+        list(
+          x = "2000-07-01", 
+          y = 1.05, 
+          xref = 'x',
+          yref = 'paper',
+          text = "NIH Phase",
+          showarrow = FALSE,
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "white"
+          ),
+          bgcolor = "blue",
+          opacity = 0.7
+        ),
+        list(
+          x = "2007-07-01", 
+          y = 1.05, 
+          xref = 'x',
+          yref = 'paper',
+          text = "Interruption",
+          showarrow = FALSE,
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "white"
+          ),
+          bgcolor = "grey",
+          opacity = 0.7
+        ),
+        list(
+          x = "2016-12-31", 
+          y = 1.05, 
+          xref = 'x',
+          yref = 'paper',
+          text = "JHU Phase",
+          showarrow = FALSE,
+          font = list(
+            family = "Arial, sans-serif",
+            size = 12,
+            color = "white"
+          ),
+          bgcolor = "purple",
+          opacity = 0.7
+        )
       )
-    }
-    
-    biocard_phases <- list(
-      list(name = "NIH Phase", start = "1995-01-01", end = "2005-12-31", color = 'blue'),
-      list(name = "Interruption", start = "2006-01-01", end = "2008-12-31", color = 'grey'),
-      list(name = "JHU Phase", start = "2009-01-01", end = "2014-12-31", color = 'purple') 
     )
     
-    
-    
-    for(phase in biocard_phases) {
-      fig <- fig %>% layout(
-        shapes = list(
-          list(
-            type = 'rect',
-            # Convert to numeric Date for x-axis compatibility
-            x0 = as.numeric(as.Date(phase$start)),
-            x1 = as.numeric(as.Date(phase$end)),
-            y0 = 0,
-            y1 = 1,
-            xref = 'x',
-            yref = 'paper',
-            fillcolor = phase$color,
-            opacity = 0.3,
-            line = list(
-              width = 0
-            ),
-            layer = "below"
-          )
-        )
-      )
-    }
-    
-    
-    # Adding annotations for ADNI phases
-    for(phase in biocard_phases) {
-      fig <- fig %>% layout(
-        annotations = list(
-          list(
-            x = mean(c(as.numeric(as.Date(phase$start)), as.numeric(as.Date(phase$end)))),
-            y = 1.05,
-            xref = 'x',
-            yref = 'paper',
-            text = phase$name,
-            showarrow = FALSE,
-            font = list(
-              family = "Arial, sans-serif",
-              size = 16,
-              color = "black"
-            )
-          )
-        )
-      )
-    }
-    
-    
-    
+  
   }
   
   
@@ -737,9 +710,15 @@ if (date_type == "Date" && study_type == "ADNI"){
 
   # Ensure "All" is the first button, making it the default selection
   buttons <- c(list(all_button), buttons)
+  
+  if (study_type == "BIOCARD"){
+    t = "Distribution of BIOCARD files"
+  } else if(study_type == "ADNI"){
+    t = "Distribution of ADNI files"
+  }
 
   fig <- fig %>% layout(
-    title = NULL,
+    title = t,
     xaxis = list(title = "TIME"),
     yaxis = list(title = "ID"),
     showlegend = FALSE,
