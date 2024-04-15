@@ -495,27 +495,20 @@ if (date_type == "Date" && study_type == "ADNI"){
   )
   
   
+  fig <- layout(fig, title = 'Highlighting with Rectangles',
+                shapes = )
   
   for(phase in adni_phases) {
     fig <- fig %>% layout(
       shapes = list(
-        list(
-          type = 'rect',
-          # Convert to numeric Date for x-axis compatibility
-          x0 = as.numeric(as.Date(phase$start)),
-          x1 = as.numeric(as.Date(phase$end)),
-          y0 = 0,
-          y1 = 1,
-          xref = 'x',
-          yref = 'paper',
-          fillcolor = phase$color,
-          opacity = 0.3,
-          line = list(
-            width = 0
-          ),
-          layer = "below"
-        )
-      )
+        list(type = "rect",
+             fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
+             x0 = "1980-01-01", x1 = "1985-01-01", xref = "x",
+             y0 = 4, y1 = 12.5, yref = "y"),
+        list(type = "rect",
+             fillcolor = "blue", line = list(color = "blue"), opacity = 0.2,
+             x0 = "2000-01-01", x1 = "2005-01-01", xref = "x",
+             y0 = 4, y1 = 12.5, yref = "y"))
     )
   }
   
