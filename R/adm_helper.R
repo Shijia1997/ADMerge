@@ -604,27 +604,43 @@ if (date_type == "Date" && study_type == "ADNI"){
   
   if (date_type == "Date" && study_type == "BIOCARD"){
     
+    
+    for (type in unique_types) {
+      fig <- fig %>% add_trace(
+        data = combined_data[combined_data$FILE == type, ],
+        x = ~DATE,
+        y = ~ID,
+        hoverinfo ="text",
+        name = type,
+        type = 'scattergl',
+        text = ~hover_text,
+        mode = 'markers',
+        visible = TRUE,
+        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+      )
+    }
+    
     fig <- fig %>% layout(
       shapes = list(
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
              x0 = "1995-01-01", x1 = "2005-12-31", xref = "x",
-             y0 =-200, y1 = -400, yref = "paper"),
+             y0 =-200, y1 = -400, yref = "y"),
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
              x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -400, y1 = -600, yref = "paper"),
+             y0 = -400, y1 = -600, yref = "y"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
              x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -600, y1 = -800, yref = "paper")
+             y0 = -600, y1 = -800, yref = "y")
       ),
       annotations = list(
         list(
           x = "2000-07-01", 
           y = 1.05, 
           xref = 'x',
-          yref = 'paper',
+          yref = 'y',
           text = "NIH Phase",
           showarrow = FALSE,
           font = list(
@@ -639,7 +655,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           x = "2007-07-01", 
           y = 1.05, 
           xref = 'x',
-          yref = 'paper',
+          yref = 'y',
           text = "Interruption",
           showarrow = FALSE,
           font = list(
@@ -654,7 +670,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           x = "2016-12-31", 
           y = 1.05, 
           xref = 'x',
-          yref = 'paper',
+          yref = 'y',
           text = "JHU Phase",
           showarrow = FALSE,
           font = list(
@@ -718,7 +734,10 @@ if (date_type == "Date" && study_type == "ADNI"){
   }
 
   fig <- fig %>% layout(
-    title = t,
+    title = list(
+      text = t,
+      x = 0.1  
+    ),
     xaxis = list(title = "TIME"),
     yaxis = list(title = "ID"),
     showlegend = FALSE,
