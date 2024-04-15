@@ -470,74 +470,80 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
 
   fig <- plot_ly()
 
-  if (date_type == "Date" && study_type == "ADNI"){
-    
-    for (type in unique_types) {
-      fig <- fig %>% add_trace(
-        data = combined_data[combined_data$FILE == type, ],
-        x = ~DATE,
-        y = ~ID,
-        hoverinfo = "text",
-        name = type,
-        type = 'scattergl',
-        text = ~hover_text,
-        mode = 'markers',
-        visible = TRUE,
-        marker = list(size = 5, opacity = 0.6, color = ~color_value)
-      )
-    }
-    
-    adni_phases <- list(
-      list(name = "ADNI 1", start = "2004-10-01", color = 'yellow'),
-      list(name = "ADNI GO", start = "2009-10-01", color = 'purple'),
-      list(name = "ADNI 2", start = "2011-10-01", color = 'green'),
-      list(name = "ADNI 3", start = "2016-10-01", color = 'red')
+if (date_type == "Date" && study_type == "ADNI"){
+  
+  for (type in unique_types) {
+    fig <- fig %>% add_trace(
+      data = combined_data[combined_data$FILE == type, ],
+      x = ~DATE,
+      y = ~ID,
+      hoverinfo ="text",
+      name = type,
+      type = 'scattergl',
+      text = ~hover_text,
+      mode = 'markers',
+      visible = TRUE,
+      marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
     )
-    
-    # Adding vertical dashed lines for each phase start
-    for(phase in adni_phases) {
-      fig <- fig %>% layout(
-        shapes = list(
-          list(
-            type = 'line',
-            x0 = as.numeric(as.Date(phase$start)),
-            x1 = as.numeric(as.Date(phase$start)),
-            y0 = 0,
-            y1 = 1,
-            xref = 'x',
-            yref = 'paper',
-            line = list(
-              color = phase$color,
-              width = 2,
-              dash = 'dash'
-            )
-          )
-        )
-      )
-    }
-    
-    # Adding annotations for ADNI phases
-    for(phase in adni_phases) {
-      fig <- fig %>% layout(
-        annotations = list(
-          list(
-            x = as.numeric(as.Date(phase$start)),
-            y = 1.05,
-            xref = 'x',
-            yref = 'paper',
-            text = phase$name,
-            showarrow = FALSE,
-            font = list(
-              family = "Arial, sans-serif",
-              size = 16,
-              color = phase$color
-            )
-          )
-        )
-      )
-    }
-    
   }
+  
+  adni_phases <- list(
+    list(name = "ADNI 1", start = "2004-10-01", end = "2009-09-30", color = 'yellow'),
+    list(name = "ADNI GO", start = "2009-10-01", end = "2011-09-30", color = 'purple'),
+    list(name = "ADNI 2", start = "2011-10-01", end = "2016-09-30", color = 'green'),
+    list(name = "ADNI 3", start = "2016-10-01", end = "2022-12-31", color = 'red')
+  )
+  
+  
+  
+  for(phase in adni_phases) {
+    fig <- fig %>% layout(
+      shapes = list(
+        list(
+          type = 'rect',
+          # Convert to numeric Date for x-axis compatibility
+          x0 = as.numeric(as.Date(phase$start)),
+          x1 = as.numeric(as.Date(phase$end)),
+          y0 = 0,
+          y1 = 1,
+          xref = 'x',
+          yref = 'paper',
+          fillcolor = phase$color,
+          opacity = 0.3,
+          line = list(
+            width = 0
+          ),
+          layer = "below"
+        )
+      )
+    )
+  }
+  
+  
+  # # Adding annotations for ADNI phases
+  # for(phase in adni_phases) {
+  #   fig <- fig %>% layout(
+  #     annotations = list(
+  #       list(
+  #         x = mean(c(as.numeric(as.Date(phase$start)), as.numeric(as.Date(phase$end)))),
+  #         y = 1.05,
+  #         xref = 'x',
+  #         yref = 'paper',
+  #         text = phase$name,
+  #         showarrow = FALSE,
+  #         font = list(
+  #           family = "Arial, sans-serif",
+  #           size = 16,
+  #           color = "black"
+  #         )
+  #       )
+  #     )
+  #   )
+  # }
+  
+  
+  
+}
   
   
   
