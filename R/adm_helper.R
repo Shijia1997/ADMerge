@@ -724,17 +724,14 @@ if (date_type == "Date" && study_type == "ADNI"){
   # Ensure "All" is the first button, making it the default selection
   buttons <- c(list(all_button), buttons)
   
-  if (study_type == "BIOCARD"){
-    t = "Distribution of BIOCARD files"
-  } else if(study_type == "ADNI"){
-    t = "Distribution of ADNI files"
-  }
+  # if (study_type == "BIOCARD"){
+  #   t = "Distribution of BIOCARD files"
+  # } else if(study_type == "ADNI"){
+  #   t = "Distribution of ADNI files"
+  # }
 
   fig <- fig %>% layout(
-    title = list(
-      text = t,
-      x = 0.9  
-    ),
+    title = NULL,
     xaxis = list(title = ""),
     yaxis = list(title = "ID"),
     showlegend = FALSE,
