@@ -495,8 +495,6 @@ if (date_type == "Date" && study_type == "ADNI"){
   )
   
   
-  fig <- layout(fig, title = 'Highlighting with Rectangles',
-                shapes = )
   
   for(phase in adni_phases) {
     fig <- fig %>% layout(
