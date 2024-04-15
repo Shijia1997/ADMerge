@@ -500,13 +500,21 @@ if (date_type == "Date" && study_type == "ADNI"){
     fig <- fig %>% layout(
       shapes = list(
         list(type = "rect",
-             fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
-             x0 = "1980-01-01", x1 = "1985-01-01", xref = "x",
-             y0 = 4, y1 = 12.5, yref = "y"),
+             fillcolor = "yellow", line = list(color = "yellow"), opacity = 0.3,
+             x0 = "2004-10-01", x1 = "2009-09-30", xref = "x",
+             y0 = 0, y1 = 200, yref = "y"),
         list(type = "rect",
-             fillcolor = "blue", line = list(color = "blue"), opacity = 0.2,
-             x0 = "2000-01-01", x1 = "2005-01-01", xref = "x",
-             y0 = 4, y1 = 12.5, yref = "y"))
+             fillcolor = "purple", line = list(color = "purple"), opacity = 0.2,
+             x0 = "2009-10-01", x1 = "2011-09-30", xref = "x",
+             y0 = 0, y1 = 200, yref = "y"),
+        list(type = "rect",
+             fillcolor = "green", line = list(color = "green"), opacity = 0.2,
+             x0 = "2011-10-01", x1 = "2016-09-30", xref = "x",
+             y0 = 0, y1 = 200, yref = "y"),
+        list(type = "rect",
+             fillcolor = "red", line = list(color = "red"), opacity = 0.2,
+             x0 = "2016-10-01", x1 = "2022-12-31", xref = "x",
+             y0 = 0, y1 = 200, yref = "y"))
     )
   }
   
