@@ -405,14 +405,15 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
           dat_tem %>%
             mutate(
               !!as.name(ID_col) := as.character(.[[ID_col]]),
-              !!as.name(DATE_col) := as.character(.[[DATE_col]]),  # Keep it as character first
+              # Ensure all visit numbers have three digits by padding with zeros
+              !!as.name(DATE_col) := str_pad(.[[DATE_col]], width = 3, pad = "0"),
               FILE = as.character(data)
             ) %>%
             mutate(
-              # Create a new 'DATE_vis' column with 'vis' labels
+              # Create a new 'DATE_vis' column with 'vis' labels and padded numbers
               DATE_vis = paste("vis", !!as.name(DATE_col), sep = ""),
               # Convert 'DATE_vis' to an ordered factor
-              DATE_vis = factor(DATE_vis, levels = paste("vis", c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"), sep = ""), ordered = TRUE)
+              DATE_vis = factor(DATE_vis, levels = paste("vis", str_pad(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"), width = 3, pad = "0"), sep = ""), ordered = TRUE)
             ) %>%
             select(
               ID = !!as.name(ID_col),
