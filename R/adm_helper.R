@@ -520,7 +520,15 @@ if (date_type == "Date" && study_type == "ADNI"){
           y = -300, 
           xref = 'x',
           yref = 'y',
-          text = "ADNI1"
+          text = "ADNI1",
+          font = list(
+            family = "Arial, sans-serif",
+            size = 14,
+            color = "black"
+          ),
+          showarrow = FALSE,
+          bgcolor = "white",
+          opacity = 0.7
         )
       )
     )
