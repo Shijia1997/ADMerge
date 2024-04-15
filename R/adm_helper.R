@@ -514,7 +514,7 @@ if (date_type == "Date" && study_type == "ADNI"){
              x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
              y0 = -1000, y1 = -1200, yref = "y")),
       
-      annotations = annotations = list(
+       annotations = list(
         list(
           x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01")) / 2),
           y = -300,
