@@ -648,7 +648,6 @@ if (date_type == "Date" && study_type == "ADNI"){
             size = 9,
             color = "black"
           ),
-          bgcolor = "blue",
           opacity = 0.7
         ),
         list(
@@ -663,7 +662,6 @@ if (date_type == "Date" && study_type == "ADNI"){
             size = 9,
             color = "black"
           ),
-          bgcolor = "grey",
           opacity = 0.7
         ),
         list(
@@ -678,7 +676,6 @@ if (date_type == "Date" && study_type == "ADNI"){
             size = 9,
             color = "black"
           ),
-          bgcolor = "purple",
           opacity = 0.7
         )
       )
