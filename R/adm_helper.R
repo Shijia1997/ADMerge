@@ -625,22 +625,22 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
              x0 = "1995-01-01", x1 = "2005-12-31", xref = "x",
-             y0 =-200, y1 = -400, yref = "y"),
+             y0 =0, y1 = -0.01, yref = "paper"),
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
              x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -400, y1 = -600, yref = "y"),
+             y0 = -0.01, y1 = 0.02, yref = "paper"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
              x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -600, y1 = -800, yref = "y")
+             y0 = -0.02, y1 = 0.03, yref = "paper")
       ),
       annotations = list(
         list(
           x = "2000-07-01", 
-          y = 1.05, 
+          y = -0.005, 
           xref = 'x',
-          yref = 'y',
+          yref = 'paper',
           text = "NIH Phase",
           showarrow = FALSE,
           font = list(
@@ -653,9 +653,9 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2007-07-01", 
-          y = 1.05, 
+          y = -0.015, 
           xref = 'x',
-          yref = 'y',
+          yref = 'paper',
           text = "Interruption",
           showarrow = FALSE,
           font = list(
@@ -668,9 +668,9 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = 1.05, 
+          y = -0.025, 
           xref = 'x',
-          yref = 'y',
+          yref = 'paper',
           text = "JHU Phase",
           showarrow = FALSE,
           font = list(
