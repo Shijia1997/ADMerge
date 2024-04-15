@@ -2,7 +2,7 @@
 
 S3method(plot,ADMerge_res)
 S3method(summary,ADMerge_res)
-S3method(complet_case,ADMerge_res)
+S3method(complete_case,ADMerge_res)
 export(ad_merge)
 export(get_key_DATEs)
 export(get_key_IDs)

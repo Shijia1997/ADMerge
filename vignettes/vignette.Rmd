@@ -26,13 +26,13 @@ ADMerge is tailored for aggregating Alzheimer’s Disease (AD) biomarker data. I
 The installation of package ADMerge is from github. requires devtools libaray.
 
 ``` {r setup}
-# library(devtools)
-# install_github("Shijia1997/ADMerge", upgrade = "never")
-# library(ADMerge)
+library(devtools)
+install_github("Shijia1997/ADMerge", upgrade = "never")
+library(ADMerge)
 # library(dplyr)
-# library(knitr)
+library(knitr)
 # library(readxl)
-# library(kableExtra)
+library(kableExtra)
 ```
 
 # Example merging datasets from Biocard study
@@ -40,19 +40,19 @@ The installation of package ADMerge is from github. requires devtools libaray.
 ## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
-# current_dir <- getwd()
-# 
-# parent_dir <- dirname(current_dir)
-# 
-# 
-# Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
-# 
-# Biocard_path
-# 
-# src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
-# 
-# knitr::kable(src_table) %>%
-#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+current_dir <- getwd()
+
+parent_dir <- dirname(current_dir)
+
+
+Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
+
+Biocard_path
+
+src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
+
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 
 ```
 
@@ -75,18 +75,18 @@ The installation of package ADMerge is from github. requires devtools libaray.
 ## Manually modify the source table with determined priority of ID and Date for joining.
 
 ```{r}
-# src_table = get_src_table(path = Biocard_path, 
-# 			ID_pattern = "ID", 
-# 			ID_usr_list = c("SUBJECT_ID","JHUANONID"), 
-# 			DATE_usr_list = c("date","VISITDATE","MRIDATE"),
-# 			 IS_overlap_list = c(TRUE, TRUE, FALSE), 
-# 			   WINDOW_list = c(366, 732, 366))
-# 
-# 
-# 
-# knitr::kable(src_table) %>%
-#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
-# 
+src_table = get_src_table(path = Biocard_path,
+			ID_pattern = "ID",
+			ID_usr_list = c("SUBJECT_ID","JHUANONID"),
+			DATE_usr_list = c("date","VISITDATE","MRIDATE"),
+			 IS_overlap_list = c(TRUE, TRUE),
+			   WINDOW_list = c(366, 732))
+
+
+
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
 
 
 ```
@@ -106,12 +106,12 @@ The installation of package ADMerge is from github. requires devtools libaray.
 ## Merge the files under the Biocard Path
 
 ```{r}
-# biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02", DATE_type = "Date")
-# 
-# merged_Biocard_data = biocard_merged$analysis_data
-# 
-# knitr::kable(merged_Biocard_data %>% head(5)) %>%
-#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+biocard_merged = ad_merge(Biocard_path, dict_src = src_table,timeline_file = "BIOCARD_CognitiveData_2021.11.02", DATE_type = "Date")
+
+merged_Biocard_data = biocard_merged$analysis_data
+
+knitr::kable(merged_Biocard_data %>% head(5)) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 ### Explianation of usage
@@ -127,7 +127,7 @@ The installation of package ADMerge is from github. requires devtools libaray.
 ## Summary the merged result using the build in function
 
 ```{r}
-#summary(biocard_merged)
+plot.data = complet_case(biocard_merged)
 ```
 ### Explanation of summary Function
 
