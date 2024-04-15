@@ -645,10 +645,10 @@ if (date_type == "Date" && study_type == "ADNI"){
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 10,
             color = "black"
           ),
-          bgcolor = "white",
+          bgcolor = "blue",
           opacity = 0.7
         ),
         list(
@@ -660,10 +660,10 @@ if (date_type == "Date" && study_type == "ADNI"){
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 10,
             color = "black"
           ),
-          bgcolor = "white",
+          bgcolor = "grey",
           opacity = 0.7
         ),
         list(
@@ -675,10 +675,10 @@ if (date_type == "Date" && study_type == "ADNI"){
           showarrow = FALSE,
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 10,
             color = "black"
           ),
-          bgcolor = "white",
+          bgcolor = "purple",
           opacity = 0.7
         )
       )
