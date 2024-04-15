@@ -522,7 +522,7 @@ if (date_type == "Date" && study_type == "ADNI"){
       
       annotation = list(
         list((
-          x = "2010-10-1",
+          x = "2007-10-01",
           y = -100, 
           xref = 'x',
           yref = 'y',
