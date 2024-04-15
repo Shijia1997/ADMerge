@@ -11,8 +11,10 @@ export(ordered_match)
 export(plot_files)
 export(read_by_type)
 
+
 import(dplyr)
 import(ggplot2)
+importFrom(stringr,str_pad)
 importFrom(lubridate, date, dmy, ymd)  # Import only needed functions to avoid conflicts
 importFrom(plotly, plot_ly, add_trace, layout)  # Assuming you use plot_ly
 importFrom(tidyr, spread, gather,drop_na)  # Example functions from tidyr
