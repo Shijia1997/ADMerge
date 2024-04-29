@@ -145,8 +145,8 @@ plot_res.ADMerge_res = function(res,
   p
 }
 
-complet_case.ADMerge_res <- function(res,check_cols){
-  df = data.frame(df$analysis_data)
+# complet_case.ADMerge_res <- function(res,check_cols){
+#   df = data.frame(df$analysis_data)
 
 
 # plot.files_no_dropdown <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL) {

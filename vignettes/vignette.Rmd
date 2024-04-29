@@ -143,7 +143,7 @@ Call the build in function to summrise the merged result's meta data. Summarised
 ## Plot the merged result
 
 ```{r}
-plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
+plot_res(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 ```
 
 
