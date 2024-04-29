@@ -57,58 +57,7 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 #'
 #' @import ggplot2
 #'
-review_complete <- function(res, check_cols) {
-  df <- data.frame(res$analysis_data) # Assuming analysis_data is a list or dataframe within res
-  
-  if (!all(check_cols %in% names(df))) {
-    stop("Please make sure input data is within the column")
-  }
-  
-  complete_cases_df <- df %>% filter(complete.cases(select(., check_cols)))
-  
-  follow_ups_per_patient <- complete_cases_df %>%
-    group_by(ID_merged) %>%
-    summarise(NumberOfFollowUps = n(), .groups = 'drop') # Ensure group data is dropped after summarise
-  
-  plot <- ggplot(follow_ups_per_patient, aes(x = NumberOfFollowUps)) +
-    geom_bar(stat = "count") + # Ensure that the 'stat' argument is correct for geom_bar
-    theme_minimal() +
-    labs(title = "Distribution of the Number of Visits for Complete Cases",
-         x = "Number of Visits",
-         y = "Frequency")
-  
-  return(list(plot = plot, complete_df = complete_cases_df))
-}
-
-
-#' Plot function for files used to merge
-#'
-#' This function generates a scatter plot for distribution of IDs across time, grouped by different files
-#'
-#' @param scr_table The source table generated from the function.
-#' @param path The path of the folder data located 
-#' @param ... Additional parameters for the function.
-#'
-#' @return A bar plot of the distribution of the given variable among different groups in the merged dataset.
-#' @export
-#'
-#' @examples
-#' \dinttun{
-#' plot.ADMerge_res(path,scr_table)
-#' }
-#'
-#' @import ggplot2
-#' @import plotly
-#' @import htmlwidgets
-#' @import lubridate
-#' 
-#' @import tidyr
-#' 
-#' @import data.table
-#' 
-#' 
-
-plot_res.ADMerge_res = function(res,
+plot.ADMerge_res = function(res,
                             distn, # extend ...
                             group,
                             baseline = FALSE,
@@ -144,6 +93,74 @@ plot_res.ADMerge_res = function(res,
   
   p
 }
+
+
+
+review_complete <- function(res, check_cols) {
+  df <- data.frame(res$analysis_data) # Assuming analysis_data is a list or dataframe within res
+  
+  if (!all(check_cols %in% names(df))) {
+    stop("Please make sure input data is within the column")
+  }
+  
+  complete_cases_df <- df %>% filter(complete.cases(select(., check_cols)))
+  
+  follow_ups_per_patient <- complete_cases_df %>%
+    group_by(ID_merged) %>%
+    summarise(NumberOfFollowUps = n(), .groups = 'drop') # Ensure group data is dropped after summarise
+  
+  plot <- ggplot(follow_ups_per_patient, aes(x = NumberOfFollowUps)) +
+    geom_bar(stat = "count") + # Ensure that the 'stat' argument is correct for geom_bar
+    theme_minimal() +
+    labs(title = "Distribution of the Number of Visits for Complete Cases",
+         x = "Number of Visits",
+         y = "Frequency")
+  
+  return(list(plot = plot, complete_df = complete_cases_df))
+}
+
+
+#' Plot function for files used to merge
+#'
+#' This function generates a scatter plot for distribution of IDs across time, grouped by different files
+#'
+# 
+# plot.ADMerge_res = function(res,
+#                             distn, # extend ...
+#                             group,
+#                             baseline = FALSE,
+#                             ...) {
+#   ana_data = res$analysis_data
+#   dict_src = res$dict_src
+#   name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))[1]
+#   plot_data <- ana_data %>%
+#     select(ID_merged, !!as.name(distn), !!as.name(group)) %>% 
+#     mutate(!!as.name(group) := factor(!!as.name(group)))
+#   if (baseline) {
+#     plot_data <- plot_data %>%
+#       distinct(ID_merged, .keep_all = TRUE)
+#   }
+#   a_gen_tbl <- function(pat, group, distn) {
+#     info <- as.data.frame(pat %>%
+#                             count(!!as.name(distn), !!as.name(group))) %>%
+#       na.omit()
+#     tbl <- reshape(info, idvar = distn, timevar = group, direction = 'wide', sep = '_') %>%
+#       replace(., is.na(.), 0) %>%
+#       mutate(All = rowSums(across(where(is.numeric))))
+#     return(tbl)
+#   }
+#   tbl <- a_gen_tbl(plot_data, group, distn)
+#   
+#   p <- ggplot(plot_data) +
+#     theme_bw() +
+#     geom_bar(aes(x = !!as.name(distn),fill = !!as.name(group)),
+#              stat = "count", position = "stack") +
+#     scale_fill_brewer(palette = "Set1")+
+#     labs(x = distn, y = 'Number of Subjects', title = 'Participant Distribution') +
+#     theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
+#   
+#   p
+# }
 
 # complet_case.ADMerge_res <- function(res,check_cols){
 #   df = data.frame(df$analysis_data)
