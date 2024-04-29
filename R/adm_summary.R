@@ -108,7 +108,7 @@ review_complete <- function(res, check_cols) {
 #' 
 #' 
 
-plot.ADMerge_res = function(res,
+plot_res.ADMerge_res = function(res,
                             distn, # extend ...
                             group,
                             baseline = FALSE,
