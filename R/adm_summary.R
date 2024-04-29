@@ -106,6 +106,47 @@ review_complete <- function(res, check_cols) {
 #' 
 #' @import data.table
 #' 
+#' 
+
+plot.ADMerge_res = function(res,
+                            distn, # extend ...
+                            group,
+                            baseline = FALSE,
+                            ...) {
+  ana_data = res$analysis_data
+  dict_src = res$dict_src
+  name_ID = na.omit(unique(unlist(strsplit(dict_src$ID_for_merge, ", "))))[1]
+  plot_data <- ana_data %>%
+    select(ID_merged, !!as.name(distn), !!as.name(group)) %>% 
+    mutate(!!as.name(group) := factor(!!as.name(group)))
+  if (baseline) {
+    plot_data <- plot_data %>%
+      distinct(ID_merged, .keep_all = TRUE)
+  }
+  a_gen_tbl <- function(pat, group, distn) {
+    info <- as.data.frame(pat %>%
+                            count(!!as.name(distn), !!as.name(group))) %>%
+      na.omit()
+    tbl <- reshape(info, idvar = distn, timevar = group, direction = 'wide', sep = '_') %>%
+      replace(., is.na(.), 0) %>%
+      mutate(All = rowSums(across(where(is.numeric))))
+    return(tbl)
+  }
+  tbl <- a_gen_tbl(plot_data, group, distn)
+  
+  p <- ggplot(plot_data) +
+    theme_bw() +
+    geom_bar(aes(x = !!as.name(distn),fill = !!as.name(group)),
+             stat = "count", position = "stack") +
+    scale_fill_brewer(palette = "Set1")+
+    labs(x = distn, y = 'Number of Subjects', title = 'Participant Distribution') +
+    theme(plot.title = element_text(size = 12, face = 'bold', hjust = 0.5))
+  
+  p
+}
+
+complet_case.ADMerge_res <- function(res,check_cols){
+  df = data.frame(df$analysis_data)
 
 
 # plot.files_no_dropdown <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src = NULL) {

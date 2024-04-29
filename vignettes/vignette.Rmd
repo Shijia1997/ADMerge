@@ -79,8 +79,8 @@ src_table = get_src_table(path = Biocard_path,
 			ID_pattern = "ID",
 			ID_usr_list = c("SUBJECT_ID","JHUANONID"),
 			DATE_usr_list = c("date","VISITDATE","MRIDATE"),
-			 IS_overlap_list = c(TRUE, TRUE),
-			   WINDOW_list = c(366, 732))
+			 IS_overlap_list = c(TRUE, TRUE,TRUE),
+			   WINDOW_list = c(366, 732,366))
 
 
 
@@ -112,6 +112,9 @@ merged_Biocard_data = biocard_merged$analysis_data
 
 knitr::kable(merged_Biocard_data %>% head(5)) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+src_table
 ```
 
 ### Explianation of usage
@@ -127,7 +130,11 @@ knitr::kable(merged_Biocard_data %>% head(5)) %>%
 ## Summary the merged result using the build in function
 
 ```{r}
-plot.data = complet_case(biocard_merged)
+library(dplyr)
+result = review_complete(biocard_merged,check_cols = c("C1201D","BNTPCT"))
+
+
+result$complete_df
 ```
 ### Explanation of summary Function
 
@@ -136,7 +143,7 @@ Call the build in function to summrise the merged result's meta data. Summarised
 ## Plot the merged result
 
 ```{r}
-# plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
+plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 ```
 
 
@@ -183,18 +190,18 @@ In this vignette, we introduced the ADMerge package, demonstrated its installati
 ## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
-# current_dir <- getwd()
-# 
-# parent_dir <- dirname(current_dir)
-# 
-# 
-# ADNI_path <- file.path(parent_dir, "data", "ADNI data")
-# 
-# 
-# src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
-# 
-# knitr::kable(src_table) %>%
-#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+current_dir <- getwd()
+
+parent_dir <- dirname(current_dir)
+
+
+ADNI_path <- file.path(parent_dir, "data", "ADNI data")
+
+
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
+
+knitr::kable(src_table) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 # 
 # 
 # src_table
@@ -209,12 +216,14 @@ In this vignette, we introduced the ADMerge package, demonstrated its installati
 # Update the source table
 
 ```{r}
-# src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
-# 
-# ADNI_merged = ad_merge(path = ADNI_path, 
-# 		   DATE_type= "Number", 
-# 		   dict_src = src_table,
-# 		   timeline_file = "CDR_14Apr2024")
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+
+ADNI_merged = ad_merge(path = ADNI_path,
+		   DATE_type= "Number",
+		   dict_src = src_table,
+		   timeline_file = "CDR_14Apr2024")
+
+src_table
 # 
 # 
 # CDR_14Apr2024 %>% filter(PHASE == "ADNI1")
@@ -222,9 +231,11 @@ In this vignette, we introduced the ADMerge package, demonstrated its installati
 
 
 ```{r}
-# summary(ADNI_merged)
-# plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
-# 
+summary(ADNI_merged)
+plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
+
+ADNI_merged$dict_src
+
 # ADNI_merged$analysis_data$DIAGNOSIS
 ```
 
