@@ -54,6 +54,9 @@ src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
 knitr::kable(src_table) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 
+
+
+
 ```
 
 ### Explianation of usage
@@ -114,7 +117,9 @@ knitr::kable(merged_Biocard_data %>% head(5)) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 
 
-src_table
+`BIOCARD CSF_Lumipulse Data with dates_081320_pre1995Removed`
+
+BIOCARD_CognitiveData_2021.11.02
 ```
 
 ### Explianation of usage
@@ -134,7 +139,7 @@ library(dplyr)
 result = review_complete(biocard_merged,check_cols = c("C1201D","BNTPCT"))
 
 
-result$complete_df
+result$plot
 ```
 ### Explanation of summary Function
 
@@ -145,7 +150,6 @@ Call the build in function to summrise the merged result's meta data. Summarised
 ```{r}
 plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 
-methods(plot)
 ```
 
 
@@ -239,5 +243,14 @@ plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
 ADNI_merged$dict_src
 
 # ADNI_merged$analysis_data$DIAGNOSIS
+```
+
+```{r}
+ADNI_merged$analysis_data
+
+
+result = review_complete(ADNI_merged,check_cols = c("DXMDES","MMSE_Q20"))
+
+result$complete_df
 ```
 
