@@ -58,14 +58,12 @@ summary.ADMerge_res = function(res, vars = NULL, ...) {
 #' @import ggplot2
 #'
 plot.ADMerge_res = function(res,
-                            distn, # extend ...
-                            group) {
+                            distn) {
   ana_data = res$analysis_data
   dict_src = res$dict_src
   
   plot_data <- ana_data %>%
-    select(ID_merged, !!as.name(distn), !!as.name(group)) %>% 
-    mutate(!!as.name(group) := factor(!!as.name(group)))
+    select(ID_merged, !!as.name(distn))
   
   # Generating the follow-up data
   follow_ups_per_patient <- plot_data %>%
