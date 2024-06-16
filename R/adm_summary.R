@@ -78,7 +78,7 @@ plot.ADMerge_res = function(res,
   p <- ggplot(follow_up_data, aes(x = NumberOfFollowUps)) +
     geom_bar(stat = "count", position = "dodge") +
     theme_minimal() +
-    labs(title = "Follow-Up Distribution for Each Group",
+    labs(title = paste("Follow-Up Distribution for", distn),
          x = "Number of Follow-Ups",
          y = "Frequency") +
     scale_fill_brewer(palette = "Set1") +
