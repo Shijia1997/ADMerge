@@ -75,7 +75,7 @@ plot.ADMerge_res = function(res,
     inner_join(follow_ups_per_patient, by = "ID_merged")
   
   # Plotting the follow-up distributions for each input variable
-  p <- ggplot(follow_up_data, aes(x = NumberOfFollowUps, fill = !!as.name(group))) +
+  p <- ggplot(follow_up_data, aes(x = NumberOfFollowUps)) +
     geom_bar(stat = "count", position = "dodge") +
     theme_minimal() +
     labs(title = "Follow-Up Distribution for Each Group",
