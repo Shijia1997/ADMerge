@@ -40,14 +40,10 @@ library(kableExtra)
 ## Generating initial source table for data used to be merged example Biocard data, including CSF, CognitiveData, Demographics, Genetics Data and MRI Cross Sectional information
 
 ```{r}
-current_dir <- getwd()
-
-parent_dir <- dirname(current_dir)
 
 
-Biocard_path <- file.path(parent_dir, "data", "BIOCARD August 2021 internal")
 
-Biocard_path
+Biocard_path <- "/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/BIOCARD August 2021 internal/"
 
 src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
 
@@ -82,14 +78,14 @@ src_table = get_src_table(path = Biocard_path,
 			ID_pattern = "ID",
 			ID_usr_list = c("SUBJECT_ID","JHUANONID"),
 			DATE_usr_list = c("date","VISITDATE","MRIDATE"),
-			 IS_overlap_list = c(TRUE, TRUE,TRUE),
-			   WINDOW_list = c(366, 732,366))
+			 IS_overlap_list = c(TRUE, TRUE,TRUE,TRUE),
+			   WINDOW_list = c(366, 732,366,366))
 
 
 
-knitr::kable(src_table) %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
-
+# knitr::kable(src_table) %>%
+#   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+src_table
 
 
 ```
@@ -136,7 +132,7 @@ BIOCARD_CognitiveData_2021.11.02
 
 ```{r}
 library(dplyr)
-result = review_complete(biocard_merged,check_cols = c("C1201D","BNTPCT"))
+result = review_complete(biocard_merged,check_cols = c("LogMem1_B","AB42AB40"))
 
 
 result$plot
@@ -154,6 +150,8 @@ plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE)
 
 
 ```{r}
+
+biocard_merged$analysis_data$Source
 # library(ggplot2)
 # 
 # df = plot(biocard_merged,"LogMem1_B","VISITNO",baseline = FALSE) 
@@ -201,13 +199,12 @@ current_dir <- getwd()
 parent_dir <- dirname(current_dir)
 
 
-ADNI_path <- file.path(parent_dir, "data", "ADNI data")
+ADNI_path <- file.path(parent_dir, "data", "ADNI new")
 
 
 src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE")
 
-knitr::kable(src_table) %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+src_table
 # 
 # 
 # src_table
@@ -222,7 +219,15 @@ knitr::kable(src_table) %>%
 # Update the source table
 
 ```{r}
-src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("DESIKANLAB_14Apr2024"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+library(dplyr)
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("ADNI DESIKANLAB"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+
+plot_files(path = ADNI_path, dict_src = src_table, study_type = "ADNI",date_type = "Number")
+
+src_table <- src_table %>% mutate(DATE_for_merge = case_when(file == "ADNI UCSF freesurfer5.1" ~ "VISCODE2",
+                                                TRUE ~ DATE_for_merge))
+
+src_table
 
 ADNI_merged = ad_merge(path = ADNI_path,
 		   DATE_type= "Number",
@@ -235,12 +240,36 @@ src_table
 # CDR_14Apr2024 %>% filter(PHASE == "ADNI1")
 ```
 
+```{r}
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE", ID_usr_list = c("RID"), DATE_usr_list = c("VISDATE","ADAS_ExamDate","EXAMDATE","RUNDATE"))
+
+plot_files(path = ADNI_path, dict_src = src_table, study_type = "ADNI",date_type = "Date")
+```
+
+```{r}
+src_table <- get_src_table(path = ADNI_path, ID_pattern = "ID", DATE_pattern = "VIS|DATE",non_longitudinal_list = c("ADNI DESIKANLAB"), ID_usr_list = c("RID"), DATE_usr_list = c("VISCODE"))
+
+src_table
+
+ADNI_merged = ad_merge(path = ADNI_path,
+		   DATE_type= "Number",
+		   dict_src = src_table,
+		   timeline_file = "ADNI UCSF freesurfer4.3")
+
+
+summary(ADNI_merged)
+```
+
 
 ```{r}
 summary(ADNI_merged)
-plot(ADNI_merged,"DIAGNOSIS","PHASE",baseline = FALSE)
+plot(ADNI_merged,"ST104CV","DIAGNOSIS",baseline = FALSE)
 
-ADNI_merged$dict_src
+ADNI_merged$analysis_data
+
+`ADNI cognitive`
+
+`ADNI Demographics` 
 
 # ADNI_merged$analysis_data$DIAGNOSIS
 ```
@@ -249,8 +278,10 @@ ADNI_merged$dict_src
 ADNI_merged$analysis_data
 
 
-result = review_complete(ADNI_merged,check_cols = c("DXMDES","MMSE_Q20"))
+result = review_complete(ADNI_merged,check_cols = c("DXMPTR4","MMSE_Q20"))
 
 result$complete_df
+
+result$plot
 ```
 
