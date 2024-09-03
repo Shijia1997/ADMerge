@@ -98,6 +98,17 @@ get_src_table = function(path,
                          DATE_usr_list = NULL,
                          non_longitudinal_list = NULL,
                          file = NULL) { # outputfile
+  
+  if (!is.null(IS_overlap_list) && !all(IS_overlap_list %in% c(TRUE, FALSE))) {
+    stop("IS_overlap_list must contain only boolean values (TRUE or FALSE).")
+  }
+  
+  
+  if (!is.null(WINDOW_list) && !is.numeric(WINDOW_list)) {
+    stop("WINDOW_list must contain only numeric values.")
+  }
+  
+  
   # get the source table
   files_list = list.files(path, pattern = FILE_pattern)
   dict_src = data.frame()

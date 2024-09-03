@@ -87,7 +87,7 @@ src_table = get_src_table(path = Biocard_path,
 #   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 src_table
 
-
+plot_files(path = Biocard_path, dict_src = src_table, study_type = "BIOCARD",date_type = "Date")
 ```
 
 ### Explianation of usage
@@ -112,10 +112,7 @@ merged_Biocard_data = biocard_merged$analysis_data
 knitr::kable(merged_Biocard_data %>% head(5)) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
 
-
-`BIOCARD CSF_Lumipulse Data with dates_081320_pre1995Removed`
-
-BIOCARD_CognitiveData_2021.11.02
+merged_Biocard_data
 ```
 
 ### Explianation of usage
@@ -232,7 +229,7 @@ src_table
 ADNI_merged = ad_merge(path = ADNI_path,
 		   DATE_type= "Number",
 		   dict_src = src_table,
-		   timeline_file = "CDR_14Apr2024")
+		   timeline_file = "ADNI UCSF freesurfer4.3")
 
 src_table
 # 
@@ -263,7 +260,7 @@ summary(ADNI_merged)
 
 ```{r}
 summary(ADNI_merged)
-plot(ADNI_merged,"ST104CV","DIAGNOSIS",baseline = FALSE)
+plot(ADNI_merged,"ST104CV")
 
 ADNI_merged$analysis_data
 
