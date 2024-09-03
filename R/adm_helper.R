@@ -99,8 +99,13 @@ get_src_table = function(path,
                          non_longitudinal_list = NULL,
                          file = NULL) { # outputfile
   
-  if (!is.null(IS_overlap_list) && !all(IS_overlap_list %in% c(TRUE, FALSE))) {
-    stop("IS_overlap_list must contain only boolean values (TRUE or FALSE).")
+  if (!is.null(IS_overlap_list)) {
+    IS_overlap_list <- as.logical(IS_overlap_list)
+    
+    # Check if IS_overlap_list contains only boolean values
+    if (!all(IS_overlap_list %in% c(TRUE, FALSE))) {
+      stop("IS_overlap_list must contain only boolean values (TRUE or FALSE).")
+    }
   }
   
   
