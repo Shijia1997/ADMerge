@@ -78,3 +78,8 @@ complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","Log
 
 complete_output
 
+```
+
+
+# Example with ADNI data
+
