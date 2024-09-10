@@ -43,7 +43,7 @@ library(kableExtra)
 
 
 
-Biocard_path <- "/Users/shijia.zhang/Desktop/ADNI/ADMerge/data/BIOCARD August 2021 internal/"
+Biocard_path <- "/Users/shijia.zhang/Desktop/test/BIOCARD August 2021 internal"
 
 src_table <- get_src_table(path = Biocard_path, ID_pattern = "ID")
 

@@ -168,7 +168,8 @@ ad_merge = function(path,
           left_join(dat_tem,
                     by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
-                    multiple = "all")  %>%
+                    multiple = "all") %>%
+          mutate(across(everything(), ~ifelse(is.na(.), get(paste0(cur_column(), ".dup")), .))) %>%
           select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
@@ -199,23 +200,25 @@ ad_merge = function(path,
                                                    ovlp = OVLP,
                                                    window_len = WIN)) %>% 
         
-          left_join(dat_tem,
-                    by = c("ID_merged" = ID),
-                    suffix = c("", ".dup"),
-                    multiple = "all")  %>%
-          distinct() %>%
-          filter(!!as.name(paste0(DATE,".dup")) >= tem_date_left &
-                   !!as.name(paste0(DATE,".dup")) < tem_date_right) %>%
-          mutate(diff = abs(as.Date(!!as.name(name_DATE)) - as.Date(!!as.name(paste0(DATE,".dup"))))) %>%
-          filter(!is.na(diff)) %>% 
-          group_by(ID_merged, !!as.name(name_DATE)) %>%
-          arrange(diff, .by_group = T) %>%
-          filter(row_number() == 1) %>%
-          ungroup() %>%
-          select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          select(-ends_with(".dup")) %>%
-          filter(!is.na(!!as.name(name_DATE))) %>% 
-          distinct() 
+            left_join(dat_tem,
+                      by = c("ID_merged" = ID),
+                      suffix = c("", ".dup"),
+                      multiple = "all") %>%
+            distinct() %>%
+            mutate(
+              date_dup = as.Date(!!as.name(paste0(DATE,".dup"))),
+              date_name = as.Date(!!as.name(name_DATE)),
+              is_within_window = date_dup >= tem_date_left & date_dup < tem_date_right,
+              diff = abs(date_name - date_dup)
+            ) %>%
+            group_by(ID_merged, date_name) %>%
+            arrange(is_within_window, diff, .by_group = TRUE) %>%
+            slice(1) %>%
+            ungroup() %>%
+            mutate(across(everything(), ~ifelse(is.na(.), get(paste0(cur_column(), ".dup")), .))) %>%
+            select(-ends_with(".dup"), -c("diff", "tem_date_left", "tem_date_right", "is_within_window", "date_dup", "date_name")) %>%
+            filter(!is.na(!!as.name(name_DATE))) %>% 
+            distinct()
        
     
         
