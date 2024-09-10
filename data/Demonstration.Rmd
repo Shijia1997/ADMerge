@@ -15,6 +15,28 @@ library(knitr)
 library(kableExtra)
 ```
 
+# updated
+
+```{r}
+BIOCARD_table =get_src_table(path = "BIOCARD Demonstration",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+
+plot_files(path = "BIOCARD Demonstration", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+Biocard_merged = ad_merge(path = "BIOCARD Demonstration",DATE_type = "Date",timeline_file = "BIOCARD_DiagnosisData_2021.11.01",dict_src = BIOCARD_table)
+
+complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","LogMem2_B","DIAGNOSIS","DOB","RACE","AB40","AB42"))
+
+#complete_output$plot
+
+Biocard_merged$analysis_data
+```
+
+
+
 # Initial overview table, BIOCARD
 
 ```{r}
@@ -35,15 +57,15 @@ BIOCARD_table
 plot_files(path = "BIOCARD Demonstration", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
 ```
 
-```{r}
-`BIOCARD_DiagnosisData_2021.11.01`$DIAGDATE
-```
+
 ```{r}
 Biocard_merged = ad_merge(path = "BIOCARD Demonstration",DATE_type = "Date",timeline_file = "BIOCARD_DiagnosisData_2021.11.01",dict_src = BIOCARD_table)
 
 complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","LogMem2_B","DIAGNOSIS","DOB","RACE","AB40","AB42"))
 
-complete_output$plot
+#complete_output$plot
+
+Biocard_merged$analysis_data
 ```
 
 
