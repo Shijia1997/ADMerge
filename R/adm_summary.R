@@ -96,7 +96,8 @@ review_complete <- function(res, check_cols) {
     stop("Please make sure input data is within the column")
   }
   
-  complete_cases_df <- df %>% filter(complete.cases(select(., check_cols)))
+  complete_cases_df <- df %>% filter(complete.cases(select(., check_cols))) %>% 
+    distinct()
   
   follow_ups_per_patient <- complete_cases_df %>%
     group_by(ID_merged) %>%
