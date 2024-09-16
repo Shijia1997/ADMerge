@@ -106,7 +106,7 @@ DATE_type = "Date",
 timeline_file = "DXSUM",
 dict_src = ADNI_table)
 
-ADNI_merged$analysis_data %>% filter(COLPROT == "ADNI3")
+ADNI_merged$analysis_data
 
 
 ```
@@ -128,6 +128,8 @@ timeline_file = "DXSUM",
 dict_src = ADNI_table)
 
 ADNI_merged$analysis_data %>% filter(COLPROT == "ADNI3")
+
+ADNI_table
 ```
 
 

@@ -224,8 +224,12 @@ ad_merge = function(path,
           left_join(dat_add,
                     by = base_names,
                     suffix = c("", ".dup")) 
+        
         dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
         orig_columns <- sub("\\.dup$", "", dup_columns)
+        
+        print(dup_columns)
+        print(orig_columns)
         
         for (col in orig_columns) {
           dup_col <- paste0(col, ".dup")
@@ -288,9 +292,21 @@ ad_merge = function(path,
                       by = c("ID_merged" = ID,
                              "Date_timeline" = DATE),
                       suffix = c("", ".dup"),
-                      multiple = "all") %>%
-            select(-ends_with(".dup")) %>%
-            distinct()
+                      multiple = "all")
+          
+          dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
+          orig_columns <- sub("\\.dup$", "", dup_columns)
+          
+          for (col in orig_columns) {
+            dup_col <- paste0(col, ".dup")
+            if (dup_col %in% names(dat_all)) {
+              dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
+            }
+          }
+          
+          
+          dat_all <- dat_all %>% select(-ends_with(".dup")) %>% distinct()
+          
   
       }
     }
