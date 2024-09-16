@@ -33,6 +33,8 @@ complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","Log
 #complete_output$plot
 
 Biocard_merged$analysis_data
+
+complete_output$complete_df
 ```
 
 
@@ -82,4 +84,49 @@ complete_output
 
 
 # Example with ADNI data
+
+```{r}
+get_src_table(path = "ADNI Demonstration",)
+```
+```{r}
+library(dplyr)
+
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("VISDATE","EXAMDATE","VISDATE","EXAMDATE","EXAMDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE"),
+                           WINDOW_list = c(366))
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+DATE_type = "Date",
+timeline_file = "DXSUM",
+dict_src = ADNI_table)
+
+ADNI_merged$analysis_data %>% filter(COLPROT == "ADNI1")
+
+
+```
+# ADNI example
+
+```{r}
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("VISDATE","EXAMDATE","VISDATE","EXAMDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE"),
+                           WINDOW_list = c(366))
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+DATE_type = "Date",
+timeline_file = "DXSUM",
+dict_src = ADNI_table)
+
+ADNI_merged$analysis_data %>% filter(COLPROT == "ADNI3")
+```
+
 

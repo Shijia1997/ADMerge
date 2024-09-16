@@ -179,10 +179,10 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          mutate(across(everything(), ~{
-            dup_col = paste0(cur_column(), ".dup")
+          mutate(across(everything(), ~ {
+            dup_col <- paste0(cur_column(), ".dup")
             if (dup_col %in% names(.)) {
-              ifelse(is.na(.), get(dup_col), .)
+              ifelse(is.na(.), .data[[dup_col]], .)
             } else {
               .
             }
@@ -221,10 +221,10 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          mutate(across(everything(), ~{
-              dup_col = paste0(cur_column(), ".dup")
+          mutate(across(everything(), ~ {
+              dup_col <- paste0(cur_column(), ".dup")
               if (dup_col %in% names(.)) {
-                ifelse(is.na(.), get(dup_col), .)
+                ifelse(is.na(.), .data[[dup_col]], .)
               } else {
                 .
               }
@@ -295,10 +295,10 @@ ad_merge = function(path,
                              "Date_timeline" = DATE),
                       suffix = c("", ".dup"),
                       multiple = "all") %>%
-            mutate(across(everything(), ~{
-              dup_col = paste0(cur_column(), ".dup")
+            mutate(across(everything(), ~ {
+              dup_col <- paste0(cur_column(), ".dup")
               if (dup_col %in% names(.)) {
-                ifelse(is.na(.), get(dup_col), .)
+                ifelse(is.na(.), .data[[dup_col]], .)
               } else {
                 .
               }
