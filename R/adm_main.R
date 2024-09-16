@@ -169,7 +169,6 @@ ad_merge = function(path,
                     by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
-          select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
@@ -181,6 +180,7 @@ ad_merge = function(path,
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
           mutate(across(everything(), ~ coalesce(.x, get(paste0(cur_column(), ".dup"), envir = .))))%>% 
+          select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() %>% 
           select(-!!as.name(DATE))
