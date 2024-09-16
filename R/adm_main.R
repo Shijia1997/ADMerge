@@ -182,7 +182,7 @@ ad_merge = function(path,
           mutate(across(everything(), ~ {
             dup_col <- paste0(cur_column(), ".dup")
             if (dup_col %in% names(cur_data())) {
-              coalesce(.x, .data[[dup_col]])
+              coalesce(.x, get(dup_col, envir = cur_data()))
             } else {
               .x
             }
@@ -224,7 +224,7 @@ ad_merge = function(path,
           mutate(across(everything(), ~ {
               dup_col <- paste0(cur_column(), ".dup")
               if (dup_col %in% names(cur_data())) {
-                coalesce(.x, .data[[dup_col]])
+                coalesce(.x, get(dup_col, envir = cur_data()))
               } else {
                 .x
               }
@@ -298,7 +298,7 @@ ad_merge = function(path,
             mutate(across(everything(), ~ {
               dup_col <- paste0(cur_column(), ".dup")
               if (dup_col %in% names(cur_data())) {
-                coalesce(.x, .data[[dup_col]])
+                coalesce(.x, get(dup_col, envir = cur_data()))
               } else {
                 .x
               }
