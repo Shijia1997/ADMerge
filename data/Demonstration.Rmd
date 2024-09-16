@@ -7,7 +7,7 @@ output: html_document
 
 ```{r}
 library(devtools)
-install_github("Shijia1997/ADMerge", upgrade = "never")
+install_github("Shijia1997/ADMerge",force = TRUE)
 library(ADMerge)
 # library(dplyr)
 library(knitr)

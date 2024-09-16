@@ -230,8 +230,7 @@ ad_merge = function(path,
               } else {
                 .x
               }
-            }))
-          %>% 
+            }))%>% 
           select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
