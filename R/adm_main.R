@@ -169,6 +169,7 @@ ad_merge = function(path,
                     by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
+          select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
@@ -179,27 +180,15 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          {
-            dat <- .
-            # Identify duplicate columns
-            dup_columns <- names(dat)[grepl("\\.dup$", names(dat))]
-            orig_columns <- sub("\\.dup$", "", dup_columns)
-            
-            # Replace NA values in original columns with values from duplicate columns
-            for (i in seq_along(orig_columns)) {
-              orig_col <- orig_columns[i]
-              dup_col <- dup_columns[i]
-              if (dup_col %in% names(dat)) {
-                dat[[orig_col]] <- coalesce(dat[[orig_col]], dat[[dup_col]])
-              }
+          mutate(across(everything(), ~{
+            dup_col = paste0(cur_column(), ".dup")
+            if (dup_col %in% names(.)) {
+              ifelse(is.na(.), get(dup_col), .)
+            } else {
+              .
             }
-            
-            # Remove duplicate columns
-            dat <- dat %>% select(-ends_with(".dup"))
-            
-            # Continue the pipeline
-            dat
-          } %>% 
+          })) %>% 
+          filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() %>% 
           select(-!!as.name(DATE))
         
@@ -232,29 +221,16 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-            
-            {
-              dat <- .
-              # Identify duplicate columns
-              dup_columns <- names(dat)[grepl("\\.dup$", names(dat))]
-              orig_columns <- sub("\\.dup$", "", dup_columns)
-              
-              # Replace NA values in original columns with values from duplicate columns
-              for (i in seq_along(orig_columns)) {
-                orig_col <- orig_columns[i]
-                dup_col <- dup_columns[i]
-                if (dup_col %in% names(dat)) {
-                  dat[[orig_col]] <- coalesce(dat[[orig_col]], dat[[dup_col]])
-                }
+            mutate(across(everything(), ~{
+              dup_col = paste0(cur_column(), ".dup")
+              if (dup_col %in% names(.)) {
+                ifelse(is.na(.), get(dup_col), .)
+              } else {
+                .
               }
-              
-              # Remove duplicate columns
-              dat <- dat %>% select(-ends_with(".dup"))
-              
-              # Continue the pipeline
-              dat
-            } %>% 
-
+            })) %>% 
+          select(-ends_with(".dup")) %>%
+          filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
        
     
@@ -319,27 +295,14 @@ ad_merge = function(path,
                              "Date_timeline" = DATE),
                       suffix = c("", ".dup"),
                       multiple = "all") %>%
-            {
-              dat <- .
-              # Identify duplicate columns
-              dup_columns <- names(dat)[grepl("\\.dup$", names(dat))]
-              orig_columns <- sub("\\.dup$", "", dup_columns)
-              
-              # Replace NA values in original columns with values from duplicate columns
-              for (i in seq_along(orig_columns)) {
-                orig_col <- orig_columns[i]
-                dup_col <- dup_columns[i]
-                if (dup_col %in% names(dat)) {
-                  dat[[orig_col]] <- coalesce(dat[[orig_col]], dat[[dup_col]])
-                }
+            mutate(across(everything(), ~{
+              dup_col = paste0(cur_column(), ".dup")
+              if (dup_col %in% names(.)) {
+                ifelse(is.na(.), get(dup_col), .)
+              } else {
+                .
               }
-              
-              # Remove duplicate columns
-              dat <- dat %>% select(-ends_with(".dup"))
-              
-              # Continue the pipeline
-              dat
-            }%>% 
+            })) %>% 
             select(-ends_with(".dup")) %>%
             distinct()
   
