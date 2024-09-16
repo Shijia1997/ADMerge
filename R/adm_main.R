@@ -169,6 +169,7 @@ ad_merge = function(path,
                     by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
+          select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
@@ -179,8 +180,6 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          mutate(across(everything(), ~ coalesce(.x, get(paste0(cur_column(), ".dup"), envir = .))))%>% 
-          select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() %>% 
           select(-!!as.name(DATE))
@@ -214,7 +213,6 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          mutate(across(everything(), ~ coalesce(.x, get(paste0(cur_column(), ".dup"), envir = .))))%>% 
           select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
@@ -225,9 +223,19 @@ ad_merge = function(path,
         dat_all = dat_all %>%
           left_join(dat_add,
                     by = base_names,
-                    suffix = c("", ".dup")) %>%
-          select(-ends_with(".dup")) %>%
-          distinct()
+                    suffix = c("", ".dup")) 
+        dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
+        orig_columns <- sub("\\.dup$", "", dup_columns)
+        
+        for (col in orig_columns) {
+          dup_col <- paste0(col, ".dup")
+          if (dup_col %in% names(dat_all)) {
+            dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
+          }
+        }
+        
+        
+        dat_all <- dat_all %>% select(-ends_with(".dup")) %>% distinct()
       }
       
       
@@ -281,7 +289,6 @@ ad_merge = function(path,
                              "Date_timeline" = DATE),
                       suffix = c("", ".dup"),
                       multiple = "all") %>%
-            mutate(across(everything(), ~ coalesce(.x, get(paste0(cur_column(), ".dup"), envir = .))))%>% 
             select(-ends_with(".dup")) %>%
             distinct()
   
