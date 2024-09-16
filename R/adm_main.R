@@ -182,7 +182,6 @@ ad_merge = function(path,
           mutate(across(everything(), ~ {
             dup_col <- paste0(cur_column(), ".dup")
             if (dup_col %in% names(cur_data())) {
-              print(dup_col)
               coalesce(.x, .data[[dup_col]])
             } else {
               .x
@@ -225,12 +224,11 @@ ad_merge = function(path,
           mutate(across(everything(), ~ {
               dup_col <- paste0(cur_column(), ".dup")
               if (dup_col %in% names(cur_data())) {
-                print(dup_col)
                 coalesce(.x, .data[[dup_col]])
               } else {
                 .x
               }
-            }))%>% 
+            })) %>% 
           select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
