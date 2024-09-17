@@ -31,11 +31,7 @@ Biocard_merged = ad_merge(path = "BIOCARD Demonstration",DATE_type = "Date",time
 
 complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","LogMem2_B","DIAGNOSIS","DOB","RACE","AB40","AB42"))
 
-#complete_output$plot
 
-Biocard_merged$analysis_data
-
-complete_output$complete_df
 ```
 
 
