@@ -261,10 +261,10 @@ ad_merge = function(path,
               dat_add[[dup_col]] <- as.Date(dat_add[[dup_col]])
             } else {
               # Handle other types as needed
+              dat_add[[col]] <- as.character(dat_add[[col]])
               dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
             }
             
-            dat_add[[col]] <- as.character(dat_add[[col]])
             dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
           }
           
