@@ -188,6 +188,21 @@ ad_merge = function(path,
         
           for (col in orig_columns) {
             dup_col <- paste0(col, ".dup")
+            
+            col_type <- class(dat_add[[col]])
+            
+            if (col_type == "character") {
+              dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
+            } else if (col_type == "numeric" || col_type == "integer" || col_type == "double") {
+              dat_add[[dup_col]] <- as.numeric(dat_add[[dup_col]])
+            } else if (col_type == "Date") {
+              dat_add[[dup_col]] <- as.Date(dat_add[[dup_col]])
+            } else {
+              # Handle other types as needed
+              dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
+            }
+            
+            
             dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
           }
         
@@ -230,6 +245,20 @@ ad_merge = function(path,
           
           for (col in orig_columns) {
             dup_col <- paste0(col, ".dup")
+            
+            col_type <- class(dat_add[[col]])
+            
+            if (col_type == "character") {
+              dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
+            } else if (col_type == "numeric" || col_type == "integer" || col_type == "double") {
+              dat_add[[dup_col]] <- as.numeric(dat_add[[dup_col]])
+            } else if (col_type == "Date") {
+              dat_add[[dup_col]] <- as.Date(dat_add[[dup_col]])
+            } else {
+              # Handle other types as needed
+              dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
+            }
+            
             dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
           }
           

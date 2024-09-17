@@ -109,6 +109,12 @@ ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV)
 # UCSFFSX51_ADNI_1_GO_2$ST88SV
 # 
 # ADNI_merged$hold_data$ST153SV.dup
+
+ADNI_merged$hold_data 
+
+ADNI_merged$hold_data_add
+
+UCSFFSX6_ADNI_3 %>% filter(RID == 1016)
 ```
 # ADNI example
 
