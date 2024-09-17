@@ -220,12 +220,19 @@ ad_merge = function(path,
     
         
         }
+        
+        print(base_names)
+        
+        dat_all <- dat_all %>% select(-contains(".dup"))
+        
         dat_all = dat_all %>%
           left_join(dat_add,
                     by = base_names,
                     suffix = c("", ".dup")) 
         
         hold_data = dat_all
+        hold_data_add = dat_add
+        print(base_names)
         
         dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
         orig_columns <- sub("\\.dup$", "", dup_columns)
@@ -237,7 +244,6 @@ ad_merge = function(path,
         }
         
         
-        dat_all <- dat_all %>% select(-ends_with(".dup")) %>% distinct()
       }
       
       
@@ -313,7 +319,7 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all %>% distinct(),
-                 dict_src = dict_src,hold_data = hold_data)
+                 dict_src = dict_src,hold_data = hold_data,hold_data_add = hold_data_add)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
