@@ -311,7 +311,7 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all %>% distinct(),
-                 dict_src = dict_src,hold_data)
+                 dict_src = dict_src)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
