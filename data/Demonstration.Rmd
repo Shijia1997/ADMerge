@@ -101,10 +101,10 @@ ADNI_merged = ad_merge(path = "ADNI_Demonstration",
 DATE_type = "Date",
 timeline_file = "DXSUM",
 dict_src = ADNI_table)
+# 
+# ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV))
 
-ADNI_merged$analysis_data %>% filter(COLPROT == "ADNI3")
 
-summary(ADNI_merged)
 ```
 # ADNI example
 
@@ -125,7 +125,7 @@ dict_src = ADNI_table)
 
 ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") 
 
-ADNI_table
+ADNI_merged$analysis_data$MMSCORE
 
 MMSCORE
 
