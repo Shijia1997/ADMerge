@@ -191,14 +191,19 @@ ad_merge = function(path,
             
             col_type <- class(dat_add[[col]])
             
-            if (col_type == "character") {
+            if (inherits(dat_add[[col]], "POSIXct") || inherits(dat_add[[dup_col]], "POSIXct")) {
+              # Convert both to character if either is POSIXct
+              dat_add[[col]] <- as.character(dat_add[[col]])
               dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
-            } else if (col_type == "numeric" || col_type == "integer" || col_type == "double") {
+            } else if (inherits(dat_add[[col]], "character")) {
+              dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
+            } else if (inherits(dat_add[[col]], "numeric") || inherits(dat_add[[col]], "integer") || inherits(dat_add[[col]], "double")) {
               dat_add[[dup_col]] <- as.numeric(dat_add[[dup_col]])
-            } else if (col_type == "Date") {
+            } else if (inherits(dat_add[[col]], "Date")) {
               dat_add[[dup_col]] <- as.Date(dat_add[[dup_col]])
             } else {
               # Handle other types as needed
+              dat_add[[col]] <- as.character(dat_add[[col]])
               dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
             }
             
@@ -259,6 +264,7 @@ ad_merge = function(path,
               dat_add[[dup_col]] <- as.character(dat_add[[dup_col]])
             }
             
+            dat_add[[col]] <- as.character(dat_add[[col]])
             dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
           }
           
@@ -281,14 +287,19 @@ ad_merge = function(path,
           
           col_type <- class(dat_all[[col]])
           
-          if (col_type == "character") {
+          if (inherits(dat_all[[col]], "POSIXct") || inherits(dat_all[[dup_col]], "POSIXct")) {
+            # Convert both to character if either is POSIXct
+            dat_all[[col]] <- as.character(dat_all[[col]])
             dat_all[[dup_col]] <- as.character(dat_all[[dup_col]])
-          } else if (col_type == "numeric" || col_type == "integer" || col_type == "double") {
+          } else if (inherits(dat_all[[col]], "character")) {
+            dat_all[[dup_col]] <- as.character(dat_all[[dup_col]])
+          } else if (inherits(dat_all[[col]], "numeric") || inherits(dat_all[[col]], "integer") || inherits(dat_all[[col]], "double")) {
             dat_all[[dup_col]] <- as.numeric(dat_all[[dup_col]])
-          } else if (col_type == "Date") {
+          } else if (inherits(dat_all[[col]], "Date")) {
             dat_all[[dup_col]] <- as.Date(dat_all[[dup_col]])
           } else {
             # Handle other types as needed
+            dat_all[[col]] <- as.character(dat_all[[col]])
             dat_all[[dup_col]] <- as.character(dat_all[[dup_col]])
           }
           
