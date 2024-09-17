@@ -227,19 +227,15 @@ ad_merge = function(path,
         
         dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
         orig_columns <- sub("\\.dup$", "", dup_columns)
-        print(dat_all)
         
         
         for (col in orig_columns) {
           dup_col <- paste0(col, ".dup")
-          if (dup_col %in% names(dat_all)) {
-            dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
-            dat_all <- dat_all %>% select(-ends_with(".dup"))
-          }
+          dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
         }
         
         
-        dat_all = dat_all %>% distinct()
+        dat_all <- dat_all %>% select(-ends_with(".dup")) %>% distinct()
       }
       
       
@@ -297,13 +293,10 @@ ad_merge = function(path,
           dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
           orig_columns <- sub("\\.dup$", "", dup_columns)
           
-          print(dat_all)
           
           for (col in orig_columns) {
             dup_col <- paste0(col, ".dup")
-            if (dup_col %in% names(dat_all)) {
-              dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
-            }
+            dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
           }
           
           
@@ -318,7 +311,7 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all %>% distinct(),
-                 dict_src = dict_src)
+                 dict_src = dict_src,hold_data)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }

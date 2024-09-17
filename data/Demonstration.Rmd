@@ -102,7 +102,7 @@ DATE_type = "Date",
 timeline_file = "DXSUM",
 dict_src = ADNI_table)
 # 
-# ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV))
+ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV))
 
 
 ```
@@ -152,6 +152,155 @@ ADNI_merged = ad_merge(path = "ADNI_Demonstration",
 DATE_type = "Date",
 timeline_file = "DXSUM",
 dict_src = ADNI_table)
+
+```
+
+```{r}
+# Load necessary library
+library(dplyr)
+
+# Create the first data frame (df1)
+df1 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(NA, 20, 30, NA),
+  Value2 = c(100, NA, 300, 400),
+  stringsAsFactors = FALSE
+)
+
+# Create the second data frame (df2)
+df2 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(10, 25, NA, 40),
+  Value2 = c(NA, 250, 350, 450),
+  stringsAsFactors = FALSE
+)
+
+# View the data frames
+print("df1:")
+print(df1)
+
+print("df2:")
+print(df2)
+
+# Perform a left join on 'ID'
+df_joined <- df1 %>%
+  left_join(df2, by = "ID", suffix = c("", ".df2"))
+
+# View the joined data frame
+print("Joined Data Frame:")
+print(df_joined)
+
+# Use coalesce to replace NA values in df1 columns with values from df2
+df_joined <- df_joined %>%
+  mutate(
+    Value1 = coalesce(Value1, Value1.df2),
+    Value2 = coalesce(Value2, Value2.df2)
+  ) %>%
+  # Remove the .df2 columns
+  select(-Value1.df2, -Value2.df2)
+
+# View the final data frame
+print("Final Data Frame after coalesce:")
+print(df_joined)
+
+```
+```{r}
+# Load necessary library
+library(dplyr)
+
+# Create the first data frame (df1)
+df1 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(NA, 20, 30, NA),
+  Value2 = c(100, NA, 300, 400),
+  stringsAsFactors = FALSE
+)
+
+# Create the second data frame (df2)
+df2 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(10, 25, NA, 40),
+  Value2 = c(NA, 250, 350, 450),
+  stringsAsFactors = FALSE
+)
+
+# View the data frames
+print("df1:")
+print(df1)
+
+print("df2:")
+print(df2)
+
+# Perform a left join on 'ID'
+df_joined <- df1 %>%
+  left_join(df2, by = "ID", suffix = c("", ".df2"))
+
+# View the joined data frame
+print("Joined Data Frame:")
+print(df_joined)
+
+# Use mutate(across(everything(), ...)) to coalesce columns
+df_joined <- df_joined %>%
+  mutate(across(everything(), ~ {
+    dup_col <- paste0(cur_column(), ".df2")
+    if (dup_col %in% names(.)) {
+      coalesce(.x, .[[dup_col]])
+    } else {
+      .x
+    }
+  })) %>%
+  select(-ends_with(".df2"))
+
+# View the final data frame
+print("Final Data Frame after coalesce:")
+print(df_joined)
+
+```
+
+```{r}
+# Load necessary library
+library(dplyr)
+
+# Create the first data frame (df1)
+df1 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(NA, 20, 30, NA),
+  Value2 = c(100, NA, 300, 400),
+  stringsAsFactors = FALSE
+)
+print(df1)
+
+# Create the second data frame (df2)
+df2 <- data.frame(
+  ID = c(1, 2, 3, 4),
+  Value1 = c(10, 25, NA, 40),
+  Value2 = c(NA, 250, 350, 450),
+  stringsAsFactors = FALSE
+)
+print(df2)
+
+# Perform a left join on 'ID'
+df_joined <- df1 %>%
+  left_join(df2, by = "ID", suffix = c("", ".df2"))
+
+print(df_joined)
+
+# Identify duplicate columns
+dup_columns <- names(df_joined)[grepl("\\.df2$", names(df_joined))]
+orig_columns <- sub("\\.df2$", "", dup_columns)
+
+# Replace NA values in original columns with values from the duplicate columns
+for (col in orig_columns) {
+  dup_col <- paste0(col, ".df2")
+  df_joined[[col]] <- coalesce(df_joined[[col]], df_joined[[dup_col]])
+}
+
+# Remove the duplicate columns
+df_joined <- df_joined %>% select(-ends_with(".df2"))
+
+# View the final data frame
+print("Final Data Frame after coalesce:")
+print(df_joined)
 
 ```
 
