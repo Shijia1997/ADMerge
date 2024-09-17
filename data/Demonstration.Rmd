@@ -31,6 +31,7 @@ Biocard_merged = ad_merge(path = "BIOCARD Demonstration",DATE_type = "Date",time
 
 complete_output = review_complete(Biocard_merged,check_cols = c("LogMem1_B","LogMem2_B","DIAGNOSIS","DOB","RACE","AB40","AB42"))
 
+complete_output$complete_df
 
 ```
 
@@ -110,11 +111,11 @@ ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV)
 # 
 # ADNI_merged$hold_data$ST153SV.dup
 
-ADNI_merged$hold_data 
-
-ADNI_merged$hold_data_add
-
-UCSFFSX6_ADNI_3 %>% filter(RID == 1016)
+# ADNI_merged$hold_data 
+# 
+# ADNI_merged$hold_data_add
+# 
+# UCSFFSX6_ADNI_3 %>% filter(RID == 1016)
 ```
 # ADNI example
 

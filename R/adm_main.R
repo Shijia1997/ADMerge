@@ -270,8 +270,32 @@ ad_merge = function(path,
         dat_all = dat_all %>%
           left_join(dat_add,
                     by = base_names,
-                    suffix = c("", ".dup")) %>%
-          select(-ends_with(".dup")) %>%
+                    suffix = c("", ".dup"))
+        
+        dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
+        orig_columns <- sub("\\.dup$", "", dup_columns)
+        
+        
+        for (col in orig_columns) {
+          dup_col <- paste0(col, ".dup")
+          
+          col_type <- class(dat_all[[col]])
+          
+          if (col_type == "character") {
+            dat_all[[dup_col]] <- as.character(dat_all[[dup_col]])
+          } else if (col_type == "numeric" || col_type == "integer" || col_type == "double") {
+            dat_all[[dup_col]] <- as.numeric(dat_all[[dup_col]])
+          } else if (col_type == "Date") {
+            dat_all[[dup_col]] <- as.Date(dat_all[[dup_col]])
+          } else {
+            # Handle other types as needed
+            dat_all[[dup_col]] <- as.character(dat_all[[dup_col]])
+          }
+          
+          dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
+        }
+        
+        dat_all = select(-ends_with(".dup")) %>%
           distinct()
       }
       
