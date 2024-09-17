@@ -104,7 +104,11 @@ dict_src = ADNI_table)
 # 
 ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV))
 
-
+# ADNI_merged$hold_data %>% distinct(ST153SV.dup)
+# 
+# UCSFFSX51_ADNI_1_GO_2$ST88SV
+# 
+# ADNI_merged$hold_data$ST153SV.dup
 ```
 # ADNI example
 

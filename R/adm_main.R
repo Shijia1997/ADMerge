@@ -169,7 +169,6 @@ ad_merge = function(path,
                     by = c("ID_merged" = ID),
                     suffix = c("", ".dup"),
                     multiple = "all")  %>%
-          select(-ends_with(".dup")) %>%
           distinct() %>%
           filter(!!as.name(DATE) >= tem_date_left &
                    !!as.name(DATE) < tem_date_right) %>%
@@ -183,6 +182,16 @@ ad_merge = function(path,
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() %>% 
           select(-!!as.name(DATE))
+        
+          dup_columns <- names(dat_add)[grepl("\\.dup$", names(dat_add))]
+          orig_columns <- sub("\\.dup$", "", dup_columns)
+        
+          for (col in orig_columns) {
+            dup_col <- paste0(col, ".dup")
+            dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
+          }
+        
+          dat_add = dat_add %>% select(-ends_with(".dup"))
         
         
         } else if (DATE == name_DATE){
@@ -213,37 +222,28 @@ ad_merge = function(path,
           filter(row_number() == 1) %>%
           ungroup() %>%
           select(-c("diff", "tem_date_left", "tem_date_right"))%>%
-          select(-ends_with(".dup")) %>%
           filter(!is.na(!!as.name(name_DATE))) %>% 
           distinct() 
+          
+          dup_columns <- names(dat_add)[grepl("\\.dup$", names(dat_add))]
+          orig_columns <- sub("\\.dup$", "", dup_columns)
+          
+          for (col in orig_columns) {
+            dup_col <- paste0(col, ".dup")
+            dat_add[[col]] <- coalesce(dat_add[[col]], dat_add[[dup_col]])
+          }
+          
+          dat_add = dat_add %>% select(-ends_with(".dup"))
        
     
         
         }
-        
-        print(base_names)
-        
-        dat_all <- dat_all %>% select(-contains(".dup"))
-        
         dat_all = dat_all %>%
           left_join(dat_add,
                     by = base_names,
-                    suffix = c("", ".dup")) 
-        
-        hold_data = dat_all
-        hold_data_add = dat_add
-        print(base_names)
-        
-        dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
-        orig_columns <- sub("\\.dup$", "", dup_columns)
-        
-        
-        for (col in orig_columns) {
-          dup_col <- paste0(col, ".dup")
-          dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
-        }
-        
-        
+                    suffix = c("", ".dup")) %>%
+          select(-ends_with(".dup")) %>%
+          distinct()
       }
       
       
@@ -296,20 +296,9 @@ ad_merge = function(path,
                       by = c("ID_merged" = ID,
                              "Date_timeline" = DATE),
                       suffix = c("", ".dup"),
-                      multiple = "all")
-          
-          dup_columns <- names(dat_all)[grepl("\\.dup$", names(dat_all))]
-          orig_columns <- sub("\\.dup$", "", dup_columns)
-          
-          
-          for (col in orig_columns) {
-            dup_col <- paste0(col, ".dup")
-            dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
-          }
-          
-          
-          dat_all <- dat_all %>% select(-ends_with(".dup")) %>% distinct()
-          
+                      multiple = "all") %>%
+            select(-ends_with(".dup")) %>%
+            distinct()
   
       }
     }
@@ -319,7 +308,7 @@ ad_merge = function(path,
   }
   cat("Merge done! \n")
   out_res = list(analysis_data = dat_all %>% distinct(),
-                 dict_src = dict_src,hold_data = hold_data,hold_data_add = hold_data_add)
+                 dict_src = dict_src)
   class(out_res) = "ADMerge_res"
   return(out_res)
 }
