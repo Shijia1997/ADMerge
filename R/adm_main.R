@@ -295,7 +295,7 @@ ad_merge = function(path,
           dat_all[[col]] <- coalesce(dat_all[[col]], dat_all[[dup_col]])
         }
         
-        dat_all = select(-ends_with(".dup")) %>%
+        dat_all = dat_all %>% select(-ends_with(".dup")) %>%
           distinct()
       }
       
