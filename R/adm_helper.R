@@ -552,13 +552,13 @@ if (date_type == "Date" && study_type == "ADNI"){
        annotations = list(
         list(
           x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01")) / 2),
-          y = -0.063,
+          y = -0.06,
           xref = 'x',
           yref = 'paper',
           text = "ADNI 1",
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           showarrow = FALSE,
@@ -567,13 +567,13 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01")) / 2),
-          y = -0.063,
+          y = -0.06,
           xref = 'x',
           yref = 'paper',
           text = "ADNI GO",
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           showarrow = FALSE,
@@ -582,13 +582,13 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01")) / 2),
-          y = -0.063,
+          y = -0.06,
           xref = 'x',
           yref = 'paper',
           text = "ADNI 2",
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           showarrow = FALSE,
@@ -597,13 +597,13 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01")) / 2),
-          y = -0.063,
+          y = -0.06,
           xref = 'x',
           yref = 'paper',
           text = "ADNI 3",
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           showarrow = FALSE,
@@ -612,13 +612,13 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09")) / 2),
-          y = -0.063,
+          y = -0.06,
           xref = 'x',
           yref = 'paper',
           text = "ADNI 4",
           font = list(
             family = "Arial, sans-serif",
-            size = 9,
+            size = 8,
             color = "black"
           ),
           showarrow = FALSE,
