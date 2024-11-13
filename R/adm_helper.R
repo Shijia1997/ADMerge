@@ -531,28 +531,28 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "yellow", line = list(color = "yellow"), opacity = 0.3,
              x0 = "2004-10-01", x1 = "2009-09-30", xref = "x",
-             y0 =-200, y1 = -400, yref = "y"),
+             y0 =-0.04, y1 = -0.06, yref = "y"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.2,
              x0 = "2009-10-02", x1 = "2011-09-30", xref = "x",
-             y0 = -200, y1 = -400, yref = "y"),
+             y0 = -0.04, y1 = -0.06, yref = "y"),
         list(type = "rect",
              fillcolor = "green", line = list(color = "green"), opacity = 0.2,
              x0 = "2011-10-01", x1 = "2016-09-30", xref = "x",
-             y0 = -200, y1 = -400, yref = "y"),
+             y0 = -0.04, y1 = -0.06, yref = "y"),
         list(type = "rect",
              fillcolor = "red", line = list(color = "red"), opacity = 0.2,
              x0 = "2016-10-02", x1 = "2022-12-31", xref = "x",
-             y0 = -200, y1 = -400, yref = "y"),
+             y0 = -0.04, y1 = -0.06, yref = "y"),
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.2,
              x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
-             y0 = -200, y1 = -400, yref = "y")),
+             y0 = -0.04, y1 = -0.06, yref = "y")),
       
        annotations = list(
         list(
           x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01")) / 2),
-          y = -300,
+          y = -0.063,
           xref = 'x',
           yref = 'y',
           text = "ADNI 1",
@@ -567,7 +567,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01")) / 2),
-          y = -300,
+          y = -0.063,
           xref = 'x',
           yref = 'y',
           text = "ADNI GO",
@@ -582,7 +582,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01")) / 2),
-          y = -300,
+          y = -0.063,
           xref = 'x',
           yref = 'y',
           text = "ADNI 2",
@@ -597,7 +597,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01")) / 2),
-          y = -300,
+          y = -0.063,
           xref = 'x',
           yref = 'y',
           text = "ADNI 3",
@@ -612,7 +612,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09")) / 2),
-          y = -300,
+          y = -0.063,
           xref = 'x',
           yref = 'y',
           text = "ADNI 4",
@@ -663,12 +663,12 @@ if (date_type == "Date" && study_type == "ADNI"){
              y0 = -0.04, y1 = -0.06, yref = "paper"),
         list(type = "rect",
              fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
-             x0 = "2006-01-01", x1 = "2008-12-31", xref = "x",
-             y0 = -0.06, y1 = -0.08, yref = "paper"),
+             x0 = "2006-01-02", x1 = "2008-12-31", xref = "x",
+             y0 = -0.04, y1 = -0.06, yref = "paper"),
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
-             x0 = "2009-01-01", x1 = "2024-12-31", xref = "x",
-             y0 = -0.08, y1 = -0.1, yref = "paper")
+             x0 = "2009-01-02", x1 = "2024-12-31", xref = "x",
+             y0 = -0.04, y1 = -0.06, yref = "paper")
       ),
       annotations = list(
         list(
@@ -687,7 +687,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2007-07-01", 
-          y = -0.083, 
+          y = -0.063, 
           xref = 'x',
           yref = 'paper',
           text = "Interruption",
@@ -701,7 +701,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = "2016-12-31", 
-          y = -0.1, 
+          y = -0.063, 
           xref = 'x',
           yref = 'paper',
           text = "JHU Phase",
