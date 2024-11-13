@@ -558,7 +558,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           text = "ADNI 1",
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 9,
             color = "black"
           ),
           showarrow = FALSE,
@@ -573,7 +573,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           text = "ADNI GO",
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 9,
             color = "black"
           ),
           showarrow = FALSE,
@@ -588,7 +588,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           text = "ADNI 2",
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 9,
             color = "black"
           ),
           showarrow = FALSE,
@@ -603,7 +603,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           text = "ADNI 3",
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 9,
             color = "black"
           ),
           showarrow = FALSE,
@@ -618,7 +618,7 @@ if (date_type == "Date" && study_type == "ADNI"){
           text = "ADNI 4",
           font = list(
             family = "Arial, sans-serif",
-            size = 12,
+            size = 9,
             color = "black"
           ),
           showarrow = FALSE,
