@@ -535,19 +535,19 @@ if (date_type == "Date" && study_type == "ADNI"){
         list(type = "rect",
              fillcolor = "purple", line = list(color = "purple"), opacity = 0.2,
              x0 = "2009-10-01", x1 = "2011-09-30", xref = "x",
-             y0 = -400, y1 = -600, yref = "y"),
+             y0 = -200, y1 = -400, yref = "y"),
         list(type = "rect",
              fillcolor = "green", line = list(color = "green"), opacity = 0.2,
              x0 = "2011-10-01", x1 = "2016-09-30", xref = "x",
-             y0 = -600, y1 = -800, yref = "y"),
+             y0 = -200, y1 = -400, yref = "y"),
         list(type = "rect",
              fillcolor = "red", line = list(color = "red"), opacity = 0.2,
              x0 = "2016-10-01", x1 = "2022-12-31", xref = "x",
-             y0 = -800, y1 = -1000, yref = "y"),
+             y0 = -200, y1 = -400, yref = "y"),
         list(type = "rect",
              fillcolor = "blue", line = list(color = "blue"), opacity = 0.2,
              x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
-             y0 = -1000, y1 = -1200, yref = "y")),
+             y0 = -200, y1 = -400, yref = "y")),
       
        annotations = list(
         list(
