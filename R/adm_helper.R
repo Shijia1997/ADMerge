@@ -567,7 +567,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01")) / 2),
-          y = -500,
+          y = -300,
           xref = 'x',
           yref = 'y',
           text = "ADNI GO",
@@ -582,7 +582,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01")) / 2),
-          y = -700,
+          y = -300,
           xref = 'x',
           yref = 'y',
           text = "ADNI 2",
@@ -597,7 +597,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01")) / 2),
-          y = -900,
+          y = -300,
           xref = 'x',
           yref = 'y',
           text = "ADNI 3",
@@ -612,7 +612,7 @@ if (date_type == "Date" && study_type == "ADNI"){
         ),
         list(
           x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09")) / 2),
-          y = -1100,
+          y = -300,
           xref = 'x',
           yref = 'y',
           text = "ADNI 4",
