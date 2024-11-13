@@ -211,6 +211,7 @@ get_src_table(path = "ADNI Demonstration",)
 ```{r}
 library(dplyr)
 
+
 ADNI_table = get_src_table(path = "ADNI Demonstration",
                            ID_usr_list = c("RID"),
                            DATE_usr_list = c("EXAMDATE","VISDATE"),
