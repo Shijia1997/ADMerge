@@ -476,9 +476,18 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   combined_data <- combined_data  %>%  distinct() %>% drop_na()
     
   
-  combined_data <- combined_data %>% mutate(color = as.factor(FILE))
+  combined_data <- combined_data %>%
+    mutate(color = droplevels(factor(FILE)))
   
-  color_palette <- RColorBrewer::brewer.pal(length(unique(combined_data$color)), "Set1")
+  n_cols    <- length(unique(combined_data$color))        # 需要多少种颜色
+  base_pal  <- RColorBrewer::brewer.pal(min(n_cols, 9), "Set1")  # 最多 9 个基础色
+  
+  # 如果文件数 > 9，就基于 Set1 插值得到更多颜色
+  color_palette <- if (n_cols > 9) {
+    colorRampPalette(base_pal)(n_cols)
+  } else {
+    base_pal
+  }
   
   color_map <- setNames(color_palette, levels(combined_data$color))
   
