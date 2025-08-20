@@ -369,7 +369,7 @@ get_window_bound = suppressWarnings(function(original_date,
 
 plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src, study_type, date_type) {
   
-  # --- 依赖 ---
+  # --- deps ---
   pkgs <- c("dplyr","data.table","stringr","lubridate","plotly","RColorBrewer","crosstalk","htmltools")
   invisible(lapply(pkgs, function(p) {
     if (!requireNamespace(p, quietly = TRUE)) stop(sprintf("Package '%s' is required.", p))
@@ -382,14 +382,14 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   
   files_list <- list.files(path, pattern = FILE_pattern)
   
-  # 载入到全局环境（保持你的原行为）
+  # load to global env (keep original behavior)
   for (file_name in files_list) {
     dat <- suppressWarnings(read_by_type(file_name, path))
     f_name <- gsub(FILE_pattern, "", file_name)
     assign(f_name, dat, envir = .GlobalEnv)
   }
   
-  # 汇总三列
+  # collect ID/DATE/FILE
   combined_data <- data.frame(ID = character(), DATE = character(), FILE = character())
   dat_list <- dict_src$file
   
@@ -402,7 +402,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       dat_name <- gsub(FILE_pattern, "", data)
       dat_tem  <- get(dat_name, envir = .GlobalEnv)
       
-      # --- ADNI: visit number ---
+      # ADNI: visit number
       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) &&
           date_type == "Number" && study_type == "ADNI") {
         
@@ -424,7 +424,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         combined_data$DATE <- as.character(combined_data$DATE)
       }
       
-      # --- BIOCARD: visit number ---
+      # BIOCARD: visit number
       if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) &&
           date_type == "Number" && study_type == "BIOCARD") {
         
@@ -451,7 +451,7 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
         combined_data$DATE <- as.character(combined_data$DATE)
       }
       
-      # --- Date 模式 ---
+      # Date mode
       else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Date") {
         dat_tem <- dat_tem %>%
           mutate(
@@ -471,15 +471,14 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
     }
   }
   
-  # 清洗 + 着色准备
+  # clean + colors
   combined_data <- combined_data %>% distinct() %>% tidyr::drop_na()
   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
   combined_data$ID <- suppressWarnings(as.numeric(combined_data$ID))
   combined_data <- combined_data[order(combined_data$ID), ]
   setDT(combined_data)
-  combined_data[, rowkey := .I]  # crosstalk 唯一 key
+  combined_data[, rowkey := .I]
   
-  # 颜色（按 FILE 因子顺序稳定映射）
   file_levels <- sort(unique(combined_data$FILE))
   combined_data$FILE <- factor(combined_data$FILE, levels = file_levels)
   n_cols   <- length(file_levels)
@@ -487,17 +486,17 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
   color_palette <- if (n_cols > 9) colorRampPalette(base_pal)(n_cols) else base_pal
   names(color_palette) <- file_levels
   
-  # Crosstalk：多选下拉（带复选）
+  # Crosstalk multi-select (English UI)
   sd <- crosstalk::SharedData$new(combined_data, key = ~rowkey, group = "files_group")
   picker <- crosstalk::filter_select(
     id     = "file_select",
-    label  = "选择/保留文件 (可多选)：",
+    label  = "Select files to display (multi-select):",
     sharedData = sd,
     ~FILE,
     multiple = TRUE
   )
   
-  # 绘图（一个 trace 按 split=~FILE 分组 -> 每个文件一个图例项）
+  # plot
   fig <- plot_ly(
     sd,
     x = ~DATE, y = ~ID,
@@ -506,16 +505,18 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
     marker = list(size = 5, opacity = 0.6)
   ) %>%
     layout(
-      # 右侧图例
       legend = list(orientation = "v", x = 1.02, xanchor = "left", y = 1, yanchor = "top"),
-      margin = list(r = 160),
+      margin = list(r = 160, b = 120),            # add bottom margin for lower labels
       xaxis  = list(title = ""),
       yaxis  = list(title = "ID"),
       showlegend = TRUE,
-      colorway = unname(color_palette[file_levels])  # 颜色顺序与 FILE 因子一致
+      colorway = unname(color_palette[file_levels])
     )
   
-  # 阶段阴影与标注
+  # phase label vertical position (lower than before)
+  phase_label_y <- -0.095  # move more negative to go lower
+  
+  # ADNI phases
   if (date_type == "Date" && study_type == "ADNI") {
     fig <- fig %>% layout(
       shapes = list(
@@ -532,24 +533,25 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
       ),
       annotations = list(
         list(x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01"))/2),
-             y = -0.056, xref='x', yref='paper', text="ADNI 1", showarrow=FALSE,
+             y = phase_label_y, xref='x', yref='paper', text="ADNI 1", showarrow=FALSE,
              font=list(size=8), bgcolor="white", opacity=0.7),
         list(x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01"))/2),
-             y = -0.056, xref='x', yref='paper', text="ADNI GO", showarrow=FALSE,
+             y = phase_label_y, xref='x', yref='paper', text="ADNI GO", showarrow=FALSE,
              font=list(size=8), bgcolor="white", opacity=0.7),
         list(x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01"))/2),
-             y = -0.056, xref='x', yref='paper', text="ADNI 2", showarrow=FALSE,
+             y = phase_label_y, xref='x', yref='paper', text="ADNI 2", showarrow=FALSE,
              font=list(size=8), bgcolor="white", opacity=0.7),
         list(x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01"))/2),
-             y = -0.056, xref='x', yref='paper', text="ADNI 3", showarrow=FALSE,
+             y = phase_label_y, xref='x', yref='paper', text="ADNI 3", showarrow=FALSE,
              font=list(size=8), bgcolor="white", opacity=0.7),
         list(x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09"))/2),
-             y = -0.056, xref='x', yref='paper', text="ADNI 4", showarrow=FALSE,
+             y = phase_label_y, xref='x', yref='paper', text="ADNI 4", showarrow=FALSE,
              font=list(size=8), bgcolor="white", opacity=0.7)
       )
     )
   }
   
+  # BIOCARD phases
   if (date_type == "Date" && study_type == "BIOCARD") {
     fig <- fig %>% layout(
       shapes = list(
@@ -561,17 +563,17 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
              xref="x", x0="2009-01-02", x1="2024-12-31", yref="paper", y0=-0.04, y1=-0.06)
       ),
       annotations = list(
-        list(x="2000-07-01", y=-0.063, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
+        list(x="2000-07-01",  y=phase_label_y, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
              font=list(size=9), opacity=0.7),
-        list(x="2007-07-01", y=-0.063, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
+        list(x="2007-07-01",  y=phase_label_y, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
              font=list(size=9), opacity=0.7),
-        list(x="2016-12-31", y=-0.063, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
+        list(x="2016-12-31",  y=phase_label_y, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
              font=list(size=9), opacity=0.7)
       )
     )
   }
   
-  # 组合：左侧筛选器 + 右侧图
+  # layout with selector + plot
   browsable(
     crosstalk::bscols(
       widths = c(3, 9),
