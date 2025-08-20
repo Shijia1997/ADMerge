@@ -367,18 +367,30 @@ get_window_bound = suppressWarnings(function(original_date,
 
 
 
-plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src, study_type, date_type) {
+plot_files <- function(
+    path,
+    FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$",
+    dict_src,
+    study_type,
+    date_type,
+    plot_height = 800,   # <— control overall plot height in pixels
+    sidebar_cols = 2     # <— Bootstrap grid width for the filter (1–5 is sensible)
+) {
   
-  # --- deps ---
-  pkgs <- c("dplyr","data.table","stringr","lubridate","plotly","RColorBrewer","crosstalk","htmltools")
+  # --- dependencies ---
+  pkgs <- c("dplyr","data.table","stringr","lubridate","plotly","RColorBrewer","crosstalk","htmltools","tidyr")
   invisible(lapply(pkgs, function(p) {
     if (!requireNamespace(p, quietly = TRUE)) stop(sprintf("Package '%s' is required.", p))
   }))
   library(dplyr); library(data.table); library(stringr); library(lubridate)
-  library(plotly); library(RColorBrewer); library(crosstalk); library(htmltools)
+  library(plotly); library(RColorBrewer); library(crosstalk); library(htmltools); library(tidyr)
   
   if (!study_type %in% c("BIOCARD", "ADNI")) stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
   if (!date_type  %in% c("Date", "Number")) stop("Invalid date_type. Please enter 'Date' or 'Number'.")
+  
+  # clamp sidebar width and compute main width (Bootstrap 12-col grid)
+  sidebar_cols <- max(1, min(5, as.integer(sidebar_cols)))
+  main_cols <- max(1, 12 - sidebar_cols)
   
   files_list <- list.files(path, pattern = FILE_pattern)
   
@@ -496,40 +508,45 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
     multiple = TRUE
   )
   
-  # plot
+  # --- plot body (height set here) ---
   fig <- plot_ly(
     sd,
     x = ~DATE, y = ~ID,
     type = "scattergl", mode = "markers",
     split = ~FILE, text = ~hover_text, hoverinfo = "text",
-    marker = list(size = 5, opacity = 0.6)
+    marker = list(size = 5, opacity = 0.6),
+    height = plot_height           # <— control height
   ) %>%
     layout(
       legend = list(orientation = "v", x = 1.02, xanchor = "left", y = 1, yanchor = "top"),
-      margin = list(r = 160, b = 120),            # add bottom margin for lower labels
+      margin = list(r = 160, b = 150),
       xaxis  = list(title = ""),
       yaxis  = list(title = "ID"),
       showlegend = TRUE,
-      colorway = unname(color_palette[file_levels])
-    )
+      colorway = unname(color_palette[file_levels]),
+      height = plot_height         # <— also set in layout for safety
+    ) %>%
+    config(responsive = TRUE)
   
-  # phase label vertical position (lower than before)
-  phase_label_y <- -0.095  # move more negative to go lower
+  # --- vertical positions (paper coords; more negative = lower) ---
+  strip_y0      <- -0.085  # top edge of colored strip
+  strip_y1      <- -0.115  # bottom edge of colored strip
+  phase_label_y <- -0.115  # text label baseline
   
   # ADNI phases
   if (date_type == "Date" && study_type == "ADNI") {
     fig <- fig %>% layout(
       shapes = list(
         list(type="rect", fillcolor="yellow", line=list(color="yellow"), opacity=0.3,
-             xref="x", x0="2004-10-01", x1="2009-09-30", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="2004-10-01", x1="2009-09-30", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="purple", line=list(color="purple"), opacity=0.3,
-             xref="x", x0="2009-10-02", x1="2011-09-30", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="2009-10-02", x1="2011-09-30", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="green", line=list(color="green"), opacity=0.3,
-             xref="x", x0="2011-10-02", x1="2016-09-30", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="2011-10-02", x1="2016-09-30", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="red", line=list(color="red"), opacity=0.3,
-             xref="x", x0="2016-10-02", x1="2022-12-31", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="2016-10-02", x1="2022-12-31", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="blue", line=list(color="blue"), opacity=0.3,
-             xref="x", x0="2023-03-01", x1="2027-07-31", yref="paper", y0=-0.04, y1=-0.06)
+             xref="x", x0="2023-03-01", x1="2027-07-31", yref="paper", y0=strip_y0, y1=strip_y1)
       ),
       annotations = list(
         list(x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01"))/2),
@@ -556,30 +573,31 @@ plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src
     fig <- fig %>% layout(
       shapes = list(
         list(type="rect", fillcolor="blue",  line=list(color="blue"),  opacity=0.3,
-             xref="x", x0="1995-01-01", x1="2005-12-30", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="1995-01-01", x1="2005-12-30", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="grey",  line=list(color="grey"),  opacity=0.3,
-             xref="x", x0="2006-01-02", x1="2008-12-30", yref="paper", y0=-0.04, y1=-0.06),
+             xref="x", x0="2006-01-02", x1="2008-12-30", yref="paper", y0=strip_y0, y1=strip_y1),
         list(type="rect", fillcolor="purple",line=list(color="purple"),opacity=0.3,
-             xref="x", x0="2009-01-02", x1="2024-12-31", yref="paper", y0=-0.04, y1=-0.06)
+             xref="x", x0="2009-01-02", x1="2024-12-31", yref="paper", y0=strip_y0, y1=strip_y1)
       ),
       annotations = list(
         list(x="2000-07-01",  y=phase_label_y, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
-             font=list(size=9), opacity=0.7),
+             font=list(size=9), bgcolor="white", opacity=0.7),
         list(x="2007-07-01",  y=phase_label_y, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
-             font=list(size=9), opacity=0.7),
+             font=list(size=9), bgcolor="white", opacity=0.7),
         list(x="2016-12-31",  y=phase_label_y, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
-             font=list(size=9), opacity=0.7)
+             font=list(size=9), bgcolor="white", opacity=0.7)
       )
     )
   }
   
-  # layout with selector + plot
+  # layout with selector + plot (wider plot area via widths)
   browsable(
     crosstalk::bscols(
-      widths = c(3, 9),
+      widths = c(sidebar_cols, main_cols),
       picker,
       fig
     )
   )
 }
+
 
