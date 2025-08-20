@@ -367,477 +367,217 @@ get_window_bound = suppressWarnings(function(original_date,
 
 
 
-plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src,study_type,date_type) {
+plot_files <- function(path, FILE_pattern = "\\.xlsx$|\\.xls$|\\.csv$", dict_src, study_type, date_type) {
   
-  if(!study_type %in% c("BIOCARD", "ADNI")) {
-    stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
-  }
+  # --- 依赖 ---
+  pkgs <- c("dplyr","data.table","stringr","lubridate","plotly","RColorBrewer","crosstalk","htmltools")
+  invisible(lapply(pkgs, function(p) {
+    if (!requireNamespace(p, quietly = TRUE)) stop(sprintf("Package '%s' is required.", p))
+  }))
+  library(dplyr); library(data.table); library(stringr); library(lubridate)
+  library(plotly); library(RColorBrewer); library(crosstalk); library(htmltools)
   
-  # Ensure that date_type is either "Date" or "Number"
-  if(!date_type %in% c("Date", "Number")) {
-    stop("Invalid date_type. Please enter 'Date' or 'Number'.")
-  }
-  
+  if (!study_type %in% c("BIOCARD", "ADNI")) stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
+  if (!date_type  %in% c("Date", "Number")) stop("Invalid date_type. Please enter 'Date' or 'Number'.")
   
   files_list <- list.files(path, pattern = FILE_pattern)
   
-  # Load each file into the global environment
+  # 载入到全局环境（保持你的原行为）
   for (file_name in files_list) {
     dat <- suppressWarnings(read_by_type(file_name, path))
-    f_name <- gsub(FILE_pattern, "", file_name) # Clean file name
+    f_name <- gsub(FILE_pattern, "", file_name)
     assign(f_name, dat, envir = .GlobalEnv)
   }
   
-  # Initialize an empty dataframe for the results
+  # 汇总三列
   combined_data <- data.frame(ID = character(), DATE = character(), FILE = character())
-  
   dat_list <- dict_src$file
   
   for (data in dat_list) {
     idx <- grep(data, dict_src$file)
     if (length(idx) > 0) {
-      ID_col <- dict_src$ID_for_merge[idx]
+      ID_col   <- dict_src$ID_for_merge[idx]
       DATE_col <- dict_src$DATE_for_merge[idx]
       
       dat_name <- gsub(FILE_pattern, "", data)
-      dat_tem <- get(dat_name, envir = .GlobalEnv)
+      dat_tem  <- get(dat_name, envir = .GlobalEnv)
       
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Number" && study_type == "ADNI"){
-        
-        dat_tem <- suppressWarnings(dat_tem %>% 
-          mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                 !!as.name(DATE_col) := factor(.[[DATE_col]],levels = c("bl", "sc","m06", "m12", "uns1", "m36", "m18", "m24", "m48", "m60", "m72",
-                                                                           "m84", "m96", "m108", "m120", "m132", "m54", "m66", "m78", "m126",
-                                                                          "m42", "m138", "m144", "m90", "m150", "m102", "m156", "m162", 
-                                                                          "m30", "m168", "m114", "m174", "m180", "m186", "m192", "m198", "m204"),
-                                                  ordered = TRUE),
-                 FILE = as.character(data)) %>% 
-          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE))
-        combined_data <- rbind(combined_data, dat_tem)
-        combined_data$DATE <- as.character(combined_data$DATE)
-        
-        
-      }
-      
-      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Number" && study_type == "BIOCARD"){
+      # --- ADNI: visit number ---
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) &&
+          date_type == "Number" && study_type == "ADNI") {
         
         dat_tem <- suppressWarnings(
           dat_tem %>%
             mutate(
-              !!as.name(ID_col) := as.character(.[[ID_col]]),
-              # Ensure all visit numbers have three digits by padding with zeros
-              !!as.name(DATE_col) := str_pad(.[[DATE_col]], width = 3, pad = "0"),
+              !!as.name(ID_col)   := as.character(.data[[ID_col]]),
+              !!as.name(DATE_col) := factor(.data[[DATE_col]],
+                                            levels = c("bl", "sc", "m06", "m12", "uns1", "m36", "m18", "m24", "m48", "m60", "m72",
+                                                       "m84", "m96", "m108", "m120", "m132", "m54", "m66", "m78", "m126",
+                                                       "m42", "m138", "m144", "m90", "m150", "m102", "m156", "m162",
+                                                       "m30", "m168", "m114", "m174", "m180", "m186", "m192", "m198", "m204"),
+                                            ordered = TRUE),
+              FILE = as.character(data)
+            ) %>%
+            select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+        )
+        combined_data <- rbind(combined_data, dat_tem)
+        combined_data$DATE <- as.character(combined_data$DATE)
+      }
+      
+      # --- BIOCARD: visit number ---
+      if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) &&
+          date_type == "Number" && study_type == "BIOCARD") {
+        
+        dat_tem <- suppressWarnings(
+          dat_tem %>%
+            mutate(
+              !!as.name(ID_col)   := as.character(.data[[ID_col]]),
+              !!as.name(DATE_col) := stringr::str_pad(.data[[DATE_col]], width = 3, pad = "0"),
               FILE = as.character(data)
             ) %>%
             mutate(
-              # Create a new 'DATE_vis' column with 'vis' labels and padded numbers
-              DATE_vis = paste("vis", !!as.name(DATE_col), sep = ""),
-              # Convert 'DATE_vis' to an ordered factor
-              DATE_vis = factor(DATE_vis, levels = paste("vis", str_pad(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112"), width = 3, pad = "0"), sep = ""), ordered = TRUE)
+              DATE_vis = paste0("vis", .data[[DATE_col]]),
+              DATE_vis = factor(
+                DATE_vis,
+                levels = paste0("vis", stringr::str_pad(c("1","2","3","4","5","6","7","8","9","10",
+                                                          "101","102","103","104","105","106","107","108","109","110","111","112"),
+                                                        width = 3, pad = "0")),
+                ordered = TRUE
+              )
             ) %>%
-            select(
-              ID = !!as.name(ID_col),
-              DATE = DATE_vis,  # Use the new 'DATE_vis' column
-              FILE
-            )
+            select(ID = !!as.name(ID_col), DATE = DATE_vis, FILE)
         )
-        
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.character(combined_data$DATE)
-        
-        
       }
       
-      
+      # --- Date 模式 ---
       else if (ID_col %in% names(dat_tem) && DATE_col %in% names(dat_tem) && date_type == "Date") {
         dat_tem <- dat_tem %>%
-          mutate(!!as.name(ID_col) := as.character(.[[ID_col]]),
-                 !!as.name(DATE_col) := case_when(
-                   stringr::str_detect(.[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ dmy(.[[DATE_col]], quiet = TRUE),
-                   stringr::str_detect(.[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ ymd(.[[DATE_col]], quiet = TRUE),
-                   TRUE ~ as.Date(NA)
-                 ),
-                 FILE = as.character(data)) %>%
+          mutate(
+            !!as.name(ID_col)   := as.character(.data[[ID_col]]),
+            !!as.name(DATE_col) := case_when(
+              stringr::str_detect(.data[[DATE_col]], "\\d{1,2}/\\d{1,2}/\\d{4}") ~ lubridate::mdy(.data[[DATE_col]], quiet = TRUE),
+              stringr::str_detect(.data[[DATE_col]], "\\d{4}-\\d{1,2}-\\d{1,2}") ~ lubridate::ymd(.data[[DATE_col]], quiet = TRUE),
+              TRUE ~ as.Date(NA)
+            ),
+            FILE = as.character(data)
+          ) %>%
           select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         
-        # Combine with the previously collected data
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.Date(combined_data$DATE)
-        
       }
     }
-    
   }
   
-  # Start plotting
-  
- 
-  
-  combined_data <- combined_data  %>%  distinct() %>% drop_na()
-    
-  
-  combined_data <- combined_data %>%
-    mutate(color = droplevels(factor(FILE)))
-  
-  n_cols    <- length(unique(combined_data$color))        # 需要多少种颜色
-  base_pal  <- RColorBrewer::brewer.pal(min(n_cols, 9), "Set1")  # 最多 9 个基础色
-  
-  # 如果文件数 > 9，就基于 Set1 插值得到更多颜色
-  color_palette <- if (n_cols > 9) {
-    colorRampPalette(base_pal)(n_cols)
-  } else {
-    base_pal
-  }
-  
-  color_map <- setNames(color_palette, levels(combined_data$color))
-  
-  combined_data <- combined_data %>% mutate(color_value = color_map[color])
-  
+  # 清洗 + 着色准备
+  combined_data <- combined_data %>% distinct() %>% tidyr::drop_na()
   combined_data <- combined_data %>% mutate(hover_text = paste("File:", FILE))
-  
-  combined_data$ID <- as.numeric(combined_data$ID)
-  
+  combined_data$ID <- suppressWarnings(as.numeric(combined_data$ID))
   combined_data <- combined_data[order(combined_data$ID), ]
-  
   setDT(combined_data)
+  combined_data[, rowkey := .I]  # crosstalk 唯一 key
   
+  # 颜色（按 FILE 因子顺序稳定映射）
+  file_levels <- sort(unique(combined_data$FILE))
+  combined_data$FILE <- factor(combined_data$FILE, levels = file_levels)
+  n_cols   <- length(file_levels)
+  base_pal <- RColorBrewer::brewer.pal(min(n_cols, 9), "Set1")
+  color_palette <- if (n_cols > 9) colorRampPalette(base_pal)(n_cols) else base_pal
+  names(color_palette) <- file_levels
   
-
-
-
-  # p <- plot_ly(data = combined_data, x = ~DATE, y = ~ID, type = 'scatter', mode = 'markers',
-  #              hoverinfo = 'text', # Display the hover text when hovering
-  #              text = ~hover_text, # Set the text that appears on hover
-  #              marker = list(size = 10, opacity = 0.6, color = ~color_value))
-
-  unique_types <- unique(combined_data$FILE)
-
-  fig <- plot_ly()
-
-if (date_type == "Date" && study_type == "ADNI"){
+  # Crosstalk：多选下拉（带复选）
+  sd <- crosstalk::SharedData$new(combined_data, key = ~rowkey, group = "files_group")
+  picker <- crosstalk::filter_select(
+    id     = "file_select",
+    label  = "选择/保留文件 (可多选)：",
+    sharedData = sd,
+    ~FILE,
+    multiple = TRUE
+  )
   
-  for (type in unique_types) {
-    fig <- fig %>% add_trace(
-      data = combined_data[combined_data$FILE == type, ],
-      x = ~DATE,
-      y = ~ID,
-      hoverinfo ="text",
-      name = type,
-      type = 'scattergl',
-      text = ~hover_text,
-      mode = 'markers',
-      visible = TRUE,
-      marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
-    )
-  }
-  
-  
-  
-  
-
-    fig <- fig %>% layout(
-      shapes = list(
-        list(type = "rect",
-             fillcolor = "yellow", line = list(color = "yellow"), opacity = 0.3,
-             x0 = "2004-10-01", x1 = "2009-09-30", xref = "x",
-             y0 =-0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
-             x0 = "2009-10-02", x1 = "2011-09-30", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "green", line = list(color = "green"), opacity = 0.3,
-             x0 = "2011-10-02", x1 = "2016-09-30", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "red", line = list(color = "red"), opacity = 0.3,
-             x0 = "2016-10-02", x1 = "2022-12-31", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
-             x0 = "2023-3-1", x1 = "2027-07-31", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper")),
-      
-       annotations = list(
-        list(
-          x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01")) / 2),
-          y = -0.056,
-          xref = 'x',
-          yref = 'paper',
-          text = "ADNI 1",
-          font = list(
-            family = "Arial, sans-serif",
-            size = 8,
-            color = "black"
-          ),
-          showarrow = FALSE,
-          bgcolor = "white",
-          opacity = 0.7
-        ),
-        list(
-          x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01")) / 2),
-          y = -0.056,
-          xref = 'x',
-          yref = 'paper',
-          text = "ADNI GO",
-          font = list(
-            family = "Arial, sans-serif",
-            size = 8,
-            color = "black"
-          ),
-          showarrow = FALSE,
-          bgcolor = "white",
-          opacity = 0.7
-        ),
-        list(
-          x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01")) / 2),
-          y = -0.056,
-          xref = 'x',
-          yref = 'paper',
-          text = "ADNI 2",
-          font = list(
-            family = "Arial, sans-serif",
-            size = 8,
-            color = "black"
-          ),
-          showarrow = FALSE,
-          bgcolor = "white",
-          opacity = 0.7
-        ),
-        list(
-          x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01")) / 2),
-          y = -0.056,
-          xref = 'x',
-          yref = 'paper',
-          text = "ADNI 3",
-          font = list(
-            family = "Arial, sans-serif",
-            size = 8,
-            color = "black"
-          ),
-          showarrow = FALSE,
-          bgcolor = "white",
-          opacity = 0.7
-        ),
-        list(
-          x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09")) / 2),
-          y = -0.056,
-          xref = 'x',
-          yref = 'paper',
-          text = "ADNI 4",
-          font = list(
-            family = "Arial, sans-serif",
-            size = 8,
-            color = "black"
-          ),
-          showarrow = FALSE,
-          bgcolor = "white",
-          opacity = 0.7
-        )
-      )
+  # 绘图（一个 trace 按 split=~FILE 分组 -> 每个文件一个图例项）
+  fig <- plot_ly(
+    sd,
+    x = ~DATE, y = ~ID,
+    type = "scattergl", mode = "markers",
+    split = ~FILE, text = ~hover_text, hoverinfo = "text",
+    marker = list(size = 5, opacity = 0.6)
+  ) %>%
+    layout(
+      # 右侧图例
+      legend = list(orientation = "v", x = 1.02, xanchor = "left", y = 1, yanchor = "top"),
+      margin = list(r = 160),
+      xaxis  = list(title = ""),
+      yaxis  = list(title = "ID"),
+      showlegend = TRUE,
+      colorway = unname(color_palette[file_levels])  # 颜色顺序与 FILE 因子一致
     )
   
-  
-  
-  
-  
-  
-}
-  
-  
-  
-  if (date_type == "Date" && study_type == "BIOCARD"){
-    
-    
-    for (type in unique_types) {
-      fig <- fig %>% add_trace(
-        data = combined_data[combined_data$FILE == type, ],
-        x = ~DATE,
-        y = ~ID,
-        hoverinfo ="text",
-        name = type,
-        type = 'scattergl',
-        text = ~hover_text,
-        mode = 'markers',
-        visible = TRUE,
-        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
-      )
-    }
-    
+  # 阶段阴影与标注
+  if (date_type == "Date" && study_type == "ADNI") {
     fig <- fig %>% layout(
       shapes = list(
-        list(type = "rect",
-             fillcolor = "blue", line = list(color = "blue"), opacity = 0.3,
-             x0 = "1995-01-01", x1 = "2005-12-30", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "grey", line = list(color = "grey"), opacity = 0.3,
-             x0 = "2006-01-02", x1 = "2008-12-30", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper"),
-        list(type = "rect",
-             fillcolor = "purple", line = list(color = "purple"), opacity = 0.3,
-             x0 = "2009-01-02", x1 = "2024-12-31", xref = "x",
-             y0 = -0.04, y1 = -0.06, yref = "paper")
+        list(type="rect", fillcolor="yellow", line=list(color="yellow"), opacity=0.3,
+             xref="x", x0="2004-10-01", x1="2009-09-30", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="purple", line=list(color="purple"), opacity=0.3,
+             xref="x", x0="2009-10-02", x1="2011-09-30", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="green", line=list(color="green"), opacity=0.3,
+             xref="x", x0="2011-10-02", x1="2016-09-30", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="red", line=list(color="red"), opacity=0.3,
+             xref="x", x0="2016-10-02", x1="2022-12-31", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="blue", line=list(color="blue"), opacity=0.3,
+             xref="x", x0="2023-03-01", x1="2027-07-31", yref="paper", y0=-0.04, y1=-0.06)
       ),
       annotations = list(
-        list(
-          x = "2000-07-01", 
-          y = -0.063, 
-          xref = 'x',
-          yref = 'paper',
-          text = "NIH Phase",
-          showarrow = FALSE,
-          font = list(
-            family = "Arial, sans-serif",
-            size = 9,
-            color = "black"
-          ),
-          opacity = 0.7
-        ),
-        list(
-          x = "2007-07-01", 
-          y = -0.063, 
-          xref = 'x',
-          yref = 'paper',
-          text = "Interruption",
-          showarrow = FALSE,
-          font = list(
-            family = "Arial, sans-serif",
-            size = 9,
-            color = "black"
-          ),
-          opacity = 0.7
-        ),
-        list(
-          x = "2016-12-31", 
-          y = -0.063, 
-          xref = 'x',
-          yref = 'paper',
-          text = "JHU Phase",
-          showarrow = FALSE,
-          font = list(
-            family = "Arial, sans-serif",
-            size = 9,
-            color = "black"
-          ),
-          opacity = 0.7
-        )
+        list(x = as.character(as.Date("2004-10-01") + (as.Date("2009-09-30") - as.Date("2004-10-01"))/2),
+             y = -0.056, xref='x', yref='paper', text="ADNI 1", showarrow=FALSE,
+             font=list(size=8), bgcolor="white", opacity=0.7),
+        list(x = as.character(as.Date("2009-10-01") + (as.Date("2011-09-30") - as.Date("2009-10-01"))/2),
+             y = -0.056, xref='x', yref='paper', text="ADNI GO", showarrow=FALSE,
+             font=list(size=8), bgcolor="white", opacity=0.7),
+        list(x = as.character(as.Date("2011-10-01") + (as.Date("2016-09-30") - as.Date("2011-10-01"))/2),
+             y = -0.056, xref='x', yref='paper', text="ADNI 2", showarrow=FALSE,
+             font=list(size=8), bgcolor="white", opacity=0.7),
+        list(x = as.character(as.Date("2016-10-01") + (as.Date("2022-12-31") - as.Date("2016-10-01"))/2),
+             y = -0.056, xref='x', yref='paper', text="ADNI 3", showarrow=FALSE,
+             font=list(size=8), bgcolor="white", opacity=0.7),
+        list(x = as.character(as.Date("2023-01-09") + (as.Date("2027-07-31") - as.Date("2023-01-09"))/2),
+             y = -0.056, xref='x', yref='paper', text="ADNI 4", showarrow=FALSE,
+             font=list(size=8), bgcolor="white", opacity=0.7)
       )
     )
-    
-  
   }
   
-  
-  else if (date_type == "Number"){
-    
-    for (type in unique_types) {
-      fig <- fig %>% add_trace(
-        data = combined_data[combined_data$FILE == type, ],
-        x = ~DATE,
-        y = ~ID,
-        hoverinfo ="text",
-        name = type,
-        type = 'scattergl',
-        text = ~hover_text,
-        mode = 'markers',
-        visible = TRUE,
-        marker = list(size = 5, opacity = 0.6, color = ~color_value)# Set visible to TRUE
+  if (date_type == "Date" && study_type == "BIOCARD") {
+    fig <- fig %>% layout(
+      shapes = list(
+        list(type="rect", fillcolor="blue",  line=list(color="blue"),  opacity=0.3,
+             xref="x", x0="1995-01-01", x1="2005-12-30", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="grey",  line=list(color="grey"),  opacity=0.3,
+             xref="x", x0="2006-01-02", x1="2008-12-30", yref="paper", y0=-0.04, y1=-0.06),
+        list(type="rect", fillcolor="purple",line=list(color="purple"),opacity=0.3,
+             xref="x", x0="2009-01-02", x1="2024-12-31", yref="paper", y0=-0.04, y1=-0.06)
+      ),
+      annotations = list(
+        list(x="2000-07-01", y=-0.063, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
+             font=list(size=9), opacity=0.7),
+        list(x="2007-07-01", y=-0.063, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
+             font=list(size=9), opacity=0.7),
+        list(x="2016-12-31", y=-0.063, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
+             font=list(size=9), opacity=0.7)
       )
-    }
-    
+    )
   }
-
-
-  # Generate dropdown items based on unique types
-  buttons <- lapply(seq_along(unique_types), function(i) {
-    list(
-      method = "restyle",
-      args = list("visible", lapply(seq_along(unique_types), function(j) i == j)),
-      label = unique_types[i]
-    )
-  })
-
-  # Add an "All" button to the dropdown
-  all_button <- list(
-    method = "restyle",
-    args = list("visible", rep(TRUE, length(unique_types))),
-    label = "All"
-  )
-
-  # Ensure "All" is the first button, making it the default selection
-  buttons <- c(list(all_button), buttons)
   
-  # if (study_type == "BIOCARD"){
-  #   t = "Distribution of BIOCARD files"
-  # } else if(study_type == "ADNI"){
-  #   t = "Distribution of ADNI files"
-  # }
-
-  fig <- fig %>% layout(
-    title = NULL,
-    xaxis = list(title = ""),
-    yaxis = list(title = "ID"),
-    showlegend = FALSE,
-    updatemenus = list(
-      list(
-        buttons = buttons,
-        direction = "down",
-        showlegend = FALSE,
-        pad = list(r = 10, t = 10),
-        showactive = TRUE,
-        x = 0.1,
-        xanchor = "left",
-        y = 1.1,
-        yanchor = "top"
-      )
+  # 组合：左侧筛选器 + 右侧图
+  browsable(
+    crosstalk::bscols(
+      widths = c(3, 9),
+      picker,
+      fig
     )
   )
-
-  # Add a custom hover event to highlight the group (FILE)
-  js_code <-  "
-function(el) {
-  var plotlyGraph = document.getElementById(el.id);
-
-  plotlyGraph.on('plotly_hover', function(data) {
-    // Find the index of the hovered data point
-    var hoverIndex = data.points[0].pointIndex;
-    console.log('Hover index data:', hoverIndex);
-
-    // Get the trace and group information for the hovered data point
-    var traceIndex = data.points[0].curveNumber;
-    var groupValue = data.points[0].fullData.marker.color[hoverIndex];
-    console.log('groupValue:', groupValue);
-
-    // Create an array to set opacities
-    var opacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Start with all opacities at 0.1
-
-    // Set the opacity of the points in the same group as the hovered point to 1 (highlight)
-    data.points[0].fullData.x.forEach(function(_, i) {
-      if(data.points[0].fullData.marker.color[i] === groupValue) {
-        opacities[i] = 1.5;
-      }
-    });
-
-    // Restyle the plot with the updated opacities
-    Plotly.restyle(el.id, {'marker.opacity': [opacities]}, [traceIndex]);
-  });
-
-  plotlyGraph.on('plotly_unhover', function(data) {
-    // Reset the opacity for all points when not hovering
-    var resetOpacities = new Array(data.points[0].fullData.x.length).fill(0.1); // Reset all opacities to 0.1
-    Plotly.restyle(el.id, {'marker.opacity': [resetOpacities]});
-  });
-}
-"
-
-# Customize the layout if desired
-
-
-fig <- fig %>% onRender(js_code)
-
-
-
-return(fig)
 }
 
