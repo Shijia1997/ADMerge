@@ -8,16 +8,16 @@ source("adm_main.R")
 
 ```{r}
 
-ADNI_table = get_src_table(path = "/Users/shijia.zhang/Desktop/archiv 1/Archive/ADNI/ADMerge/data/ADNI Demonstration",
+ADNI_table = get_src_table(path = "ADNI_demonstration_multi_site",
                            ID_usr_list = c("RID"),
                            DATE_usr_list = c("EXAMDATE","VISDATE"),
                            non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
-                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
-                           WINDOW_list = c(366,366,366,1830,366,366,366,366))
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366,366,366,366,366))
 
 ADNI_table
 
-plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date", plot_height = 1000) 
+plot_files(path = "ADNI_demonstration_multi_site", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
 ```
 
 ```{r}

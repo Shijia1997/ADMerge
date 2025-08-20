@@ -373,9 +373,12 @@ plot_files <- function(
     dict_src,
     study_type,
     date_type,
-    plot_height = 800,   # <— control overall plot height in pixels
-    sidebar_cols = 2     # <— Bootstrap grid width for the filter (1–5 is sensible)
+    plot_height = 800,   # overall plot height (px)
+    sidebar_cols = 2,    # Bootstrap grid width for the filter (1–5 is sensible)
+    palette_scheme = c("bright","brewer","d3","okabeito"), # 颜色方案
+    avoid_greys = TRUE   # 过滤低饱和度灰色
 ) {
+  palette_scheme <- match.arg(palette_scheme)
   
   # --- dependencies ---
   pkgs <- c("dplyr","data.table","stringr","lubridate","plotly","RColorBrewer","crosstalk","htmltools","tidyr")
@@ -388,7 +391,64 @@ plot_files <- function(
   if (!study_type %in% c("BIOCARD", "ADNI")) stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
   if (!date_type  %in% c("Date", "Number")) stop("Invalid date_type. Please enter 'Date' or 'Number'.")
   
-  # clamp sidebar width and compute main width (Bootstrap 12-col grid)
+  # helper: 生成高区分度颜色（不额外安装包）
+  make_distinct_colors <- function(n, scheme = "bright", avoid_greys = TRUE) {
+    # 基础候选
+    cols <- switch(
+      scheme,
+      "okabeito" = c("#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7","#000000"),
+      "d3" = c( # D3/Plotly 常见分类色（非灰）
+        "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b","#e377c2",
+        "#17becf","#bcbd22","#7f7f7f", # 这一个略灰，如开启 avoid_greys 会被过滤
+        "#393b79","#637939","#8ca252","#b5cf6b","#e7ba52","#bd9e39","#ad494a",
+        "#d6616b","#ce6dbd","#de9ed6"
+      ),
+      "brewer" = c(
+        RColorBrewer::brewer.pal(9,"Set1"),
+        RColorBrewer::brewer.pal(8,"Dark2"),
+        RColorBrewer::brewer.pal(8,"Set2"),
+        RColorBrewer::brewer.pal(12,"Paired"),
+        RColorBrewer::brewer.pal(8,"Accent")
+      ),
+      "bright" = { # HCL 明亮色环（高饱和度、无灰）
+        grDevices::hcl(
+          h = seq(15, 375, length.out = n + 1)[-1],
+          c = 85,  # chroma（饱和度）
+          l = 55   # lightness（明度）
+        )
+      }
+    )
+    
+    # 若选择的方案长度不足 n，则用 HCL 再补齐，确保不靠近灰
+    if (length(cols) < n) {
+      need <- n - length(cols)
+      add <- grDevices::hcl(
+        h = seq(0, 360, length.out = need + 1)[-1],
+        c = 90, l = 60
+      )
+      cols <- c(cols, add)
+    }
+    
+    # 过滤低饱和度灰（可关）
+    if (avoid_greys) {
+      rgb <- grDevices::col2rgb(cols) / 255
+      hsv <- grDevices::rgb2hsv(rgb)
+      keep <- hsv["s", ] > 0.20 & hsv["v", ] > 0.25
+      cols <- cols[keep]
+      if (length(cols) < n) {
+        need <- n - length(cols)
+        add <- grDevices::hcl(
+          h = seq(0, 360, length.out = need + 1)[-1] + 180/need,
+          c = 95, l = 60
+        )
+        cols <- c(cols, add)
+      }
+    }
+    
+    cols[seq_len(n)]
+  }
+  
+  # clamp sidebar width
   sidebar_cols <- max(1, min(5, as.integer(sidebar_cols)))
   main_cols <- max(1, 12 - sidebar_cols)
   
@@ -423,14 +483,13 @@ plot_files <- function(
             mutate(
               !!as.name(ID_col)   := as.character(.data[[ID_col]]),
               !!as.name(DATE_col) := factor(.data[[DATE_col]],
-                                            levels = c("bl", "sc", "m06", "m12", "uns1", "m36", "m18", "m24", "m48", "m60", "m72",
-                                                       "m84", "m96", "m108", "m120", "m132", "m54", "m66", "m78", "m126",
-                                                       "m42", "m138", "m144", "m90", "m150", "m102", "m156", "m162",
-                                                       "m30", "m168", "m114", "m174", "m180", "m186", "m192", "m198", "m204"),
+                                            levels = c("bl","sc","m06","m12","uns1","m36","m18","m24","m48","m60","m72",
+                                                       "m84","m96","m108","m120","m132","m54","m66","m78","m126",
+                                                       "m42","m138","m144","m90","m150","m102","m156","m162",
+                                                       "m30","m168","m114","m174","m180","m186","m192","m198","m204"),
                                             ordered = TRUE),
               FILE = as.character(data)
-            ) %>%
-            select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+            ) %>% select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         )
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.character(combined_data$DATE)
@@ -474,8 +533,7 @@ plot_files <- function(
               TRUE ~ as.Date(NA)
             ),
             FILE = as.character(data)
-          ) %>%
-          select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
+          ) %>% select(ID = !!as.name(ID_col), DATE = !!as.name(DATE_col), FILE)
         
         combined_data <- rbind(combined_data, dat_tem)
         combined_data$DATE <- as.Date(combined_data$DATE)
@@ -493,9 +551,10 @@ plot_files <- function(
   
   file_levels <- sort(unique(combined_data$FILE))
   combined_data$FILE <- factor(combined_data$FILE, levels = file_levels)
-  n_cols   <- length(file_levels)
-  base_pal <- RColorBrewer::brewer.pal(min(n_cols, 9), "Set1")
-  color_palette <- if (n_cols > 9) colorRampPalette(base_pal)(n_cols) else base_pal
+  
+  # >>> 使用新的调色器（取代原 Set1 + 插值） <<<
+  n_cols <- length(file_levels)
+  color_palette <- make_distinct_colors(n_cols, scheme = palette_scheme, avoid_greys = avoid_greys)
   names(color_palette) <- file_levels
   
   # Crosstalk multi-select (English UI)
@@ -508,14 +567,14 @@ plot_files <- function(
     multiple = TRUE
   )
   
-  # --- plot body (height set here) ---
+  # plot
   fig <- plot_ly(
     sd,
     x = ~DATE, y = ~ID,
     type = "scattergl", mode = "markers",
     split = ~FILE, text = ~hover_text, hoverinfo = "text",
     marker = list(size = 5, opacity = 0.6),
-    height = plot_height           # <— control height
+    height = plot_height
   ) %>%
     layout(
       legend = list(orientation = "v", x = 1.02, xanchor = "left", y = 1, yanchor = "top"),
@@ -523,17 +582,16 @@ plot_files <- function(
       xaxis  = list(title = ""),
       yaxis  = list(title = "ID"),
       showlegend = TRUE,
-      colorway = unname(color_palette[file_levels]),
-      height = plot_height         # <— also set in layout for safety
+      colorway = unname(color_palette[file_levels]), # 用新色板
+      height = plot_height
     ) %>%
     config(responsive = TRUE)
   
-  # --- vertical positions (paper coords; more negative = lower) ---
-  strip_y0      <- -0.085  # top edge of colored strip
-  strip_y1      <- -0.115  # bottom edge of colored strip
-  phase_label_y <- -0.115  # text label baseline
+  # phase strips / labels
+  strip_y0      <- -0.085
+  strip_y1      <- -0.115
+  phase_label_y <- -0.115
   
-  # ADNI phases
   if (date_type == "Date" && study_type == "ADNI") {
     fig <- fig %>% layout(
       shapes = list(
@@ -568,7 +626,6 @@ plot_files <- function(
     )
   }
   
-  # BIOCARD phases
   if (date_type == "Date" && study_type == "BIOCARD") {
     fig <- fig %>% layout(
       shapes = list(
@@ -580,17 +637,17 @@ plot_files <- function(
              xref="x", x0="2009-01-02", x1="2024-12-31", yref="paper", y0=strip_y0, y1=strip_y1)
       ),
       annotations = list(
-        list(x="2000-07-01",  y=phase_label_y, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
+        list(x="2000-07-01", y=phase_label_y, xref='x', yref='paper', text="NIH Phase", showarrow=FALSE,
              font=list(size=9), bgcolor="white", opacity=0.7),
-        list(x="2007-07-01",  y=phase_label_y, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
+        list(x="2007-07-01", y=phase_label_y, xref='x', yref='paper', text="Interruption", showarrow=FALSE,
              font=list(size=9), bgcolor="white", opacity=0.7),
-        list(x="2016-12-31",  y=phase_label_y, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
+        list(x="2016-12-31", y=phase_label_y, xref='x', yref='paper', text="JHU Phase", showarrow=FALSE,
              font=list(size=9), bgcolor="white", opacity=0.7)
       )
     )
   }
   
-  # layout with selector + plot (wider plot area via widths)
+  # layout with selector + plot
   browsable(
     crosstalk::bscols(
       widths = c(sidebar_cols, main_cols),
@@ -599,5 +656,6 @@ plot_files <- function(
     )
   )
 }
+
 
 
