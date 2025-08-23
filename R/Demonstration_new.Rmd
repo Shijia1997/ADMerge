@@ -10,7 +10,7 @@ source("adm_main.R")
 
 ADNI_table = get_src_table(path = "ADNI_demonstration_multi_site",
                            ID_usr_list = c("RID"),
-                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE","SCANDATE"),
                            non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
                            IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE"),
                            WINDOW_list = c(366,366,366,1830,366,366,366,366,366,366,366,366))
@@ -595,6 +595,46 @@ library(survminer)
 library(gtsummary)
 library(broom)
 library(ggplot2)
+
+
+library(ADMerge)
+source("adm_helper.R")
+source("adm_main.R")
+library(readxl)
+library(dplyr)
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+
+
+
+plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_CognitiveData",dict_src = BIOCARD_table)
+
+
+complete_BIOCARD <- review_complete(
+  Biocard_merged, 
+  check_cols = c(
+    # -- 基本信息 --
+    "ID_merged",
+    "Date_timeline",
+    "VISITNO",
+    
+    # -- 诊断变量 --
+    "DIAGNOSIS",
+    
+    # -- 人口统计变量 --
+    "SEX", "EDUC", "HANDED", "RACE",
+    
+    # -- 认知变量 --
+    "C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A"
+  )
+)
+
+
 
 # ==== 1. 构建干净的 surv_data ====
 df <- complete_BIOCARD$complete_df

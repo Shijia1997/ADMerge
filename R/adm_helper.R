@@ -373,11 +373,12 @@ plot_files <- function(
     dict_src,
     study_type,
     date_type,
-    plot_height = 800,   # overall plot height (px)
-    sidebar_cols = 2,    # Bootstrap grid width for the filter (1–5 is sensible)
+    plot_height = 800,      # overall plot height (px)
+    sidebar_cols = 2,       # Bootstrap grid width for the filter (1–5 is sensible)
     palette_scheme = c("bright","brewer","d3","okabeito"), # color schemes
-    avoid_greys = TRUE,  # filter low-saturation greys
-    y_range = c(0, 12000) # <<< fixed ID scale
+    avoid_greys = TRUE,     # filter low-saturation greys
+    y_range = NULL,         # auto: BIOCARD -> c(0,500), ADNI -> c(0,12000), others -> autorange
+    y_dtick = NULL          # auto: 100 for small span, else 1000 (when y_range is fixed)
 ) {
   palette_scheme <- match.arg(palette_scheme)
   
@@ -389,8 +390,8 @@ plot_files <- function(
   library(dplyr); library(data.table); library(stringr); library(lubridate)
   library(plotly); library(RColorBrewer); library(crosstalk); library(htmltools); library(tidyr)
   
-  if (!study_type %in% c("BIOCARD", "ADNI")) stop("Invalid study_type. Please enter 'BIOCARD' or 'ADNI'.")
-  if (!date_type  %in% c("Date", "Number")) stop("Invalid date_type. Please enter 'Date' or 'Number'.")
+  # only validate date_type; allow any study_type (others will autorange & no phase bars)
+  if (!date_type %in% c("Date", "Number")) stop("Invalid date_type. Please enter 'Date' or 'Number'.")
   
   # helper: distinct vibrant colors without extra packages
   make_distinct_colors <- function(n, scheme = "bright", avoid_greys = TRUE) {
@@ -542,6 +543,27 @@ plot_files <- function(
   color_palette <- make_distinct_colors(n_cols, scheme = palette_scheme, avoid_greys = avoid_greys)
   names(color_palette) <- file_levels
   
+  # --- y-axis defaults by study ---
+  auto_y <- FALSE
+  if (is.null(y_range)) {
+    if (study_type == "BIOCARD") {
+      y_range <- c(0, 500)
+    } else if (study_type == "ADNI") {
+      y_range <- c(0, 12000)
+    } else {
+      auto_y <- TRUE  # other studies: no fixed limits
+    }
+  }
+  if (!auto_y && is.null(y_dtick)) {
+    span <- diff(y_range)
+    y_dtick <- if (span <= 2000) 100 else 1000
+  }
+  yaxis_obj <- if (auto_y) {
+    list(title = "ID", autorange = TRUE, rangemode = "tozero")
+  } else {
+    list(title = "ID", range = y_range, autorange = FALSE, dtick = y_dtick)
+  }
+  
   # Crosstalk multi-select
   sd <- crosstalk::SharedData$new(combined_data, key = ~rowkey, group = "files_group")
   picker <- crosstalk::filter_select(
@@ -552,7 +574,7 @@ plot_files <- function(
     multiple = TRUE
   )
   
-  # plot (y-axis fixed to y_range)
+  # plot
   fig <- plot_ly(
     sd,
     x = ~DATE, y = ~ID,
@@ -565,19 +587,14 @@ plot_files <- function(
       legend = list(orientation = "v", x = 1.02, xanchor = "left", y = 1, yanchor = "top"),
       margin = list(r = 160, b = 150),
       xaxis  = list(title = ""),
-      yaxis  = list(
-        title = "ID",
-        range = y_range,    # <<< fixed scale
-        autorange = FALSE,  # keep fixed when filtering
-        dtick = 1000        # tick every 1000 (adjust as you like)
-      ),
+      yaxis  = yaxis_obj,
       showlegend = TRUE,
       colorway = unname(color_palette[file_levels]),
       height = plot_height
     ) %>%
     config(responsive = TRUE)
   
-  # phase strips / labels (unchanged)
+  # phase strips / labels (ADNI & BIOCARD only)
   strip_y0      <- -0.085
   strip_y1      <- -0.115
   phase_label_y <- -0.115
@@ -637,6 +654,8 @@ plot_files <- function(
     )
   }
   
+  # others: no phase bars (nothing to add)
+  
   browsable(
     crosstalk::bscols(
       widths = c(sidebar_cols, main_cols),
@@ -645,6 +664,8 @@ plot_files <- function(
     )
   )
 }
+
+
 
 
 
