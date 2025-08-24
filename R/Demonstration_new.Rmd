@@ -785,6 +785,8 @@ plot_c1204
 
 biocard_plot_files = plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
 
+htmlwidgets::saveWidget(biocard_plot_files, "biocard_plot_files.html", selfcontained = TRUE)
+class(biocard_plot_files)
 ```
 
 ```{r}
