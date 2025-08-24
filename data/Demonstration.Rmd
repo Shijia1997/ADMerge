@@ -14,11 +14,36 @@ library(ADMerge)
 library(knitr)
 # library(readxl)
 library(kableExtra)
+
+
+
 ```
+
+
+```{r}
+library(ADMerge)
+library(dplyr)
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+BIOCARD_table
+
+
+plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_DiagnosisData_2021.11.01",dict_src = BIOCARD_table)
+
+Biocard_merged$analysis_data
+
+```
+
 
 # updated
 
 ```{r}
+library(ADMerge)
 library(dplyr)
 BIOCARD_table =get_src_table(path = "BIOCARD Demonstration",
               ID_usr_list = c("SUBJECT_ID"),
@@ -87,6 +112,8 @@ cox_df <- as.data.frame(cox_df)
 
 cox_df <- cox_df %>% select(-c(ID_merged))
 
+
+
 # Applying SMOTE on `event` column
 smoted_data <- SMOTE(event ~ ., data = cox_df, perc.over = 2000, perc.under = 150)
 
@@ -119,7 +146,192 @@ test_data$risk_score <- predict(cox_model, newdata = test_data, type = "risk")
 cox_model %>% gtsummary::tbl_regression(exp =TRUE)
 
 
+colnames(BIOCARD_table)
+
 ```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# 假设 complete_df 已经准备好了
+num_vars <- c("ptau181", "ttau", "AB42", "AB40", "AB42AB40", 
+              "mattis", "LogMem1_B", "LogMem2_B", "BNTPCT", 
+              "DECAGE", "EDUC")
+
+dat <- complete_df %>% select(all_of(num_vars)) %>%
+  select(where(is.numeric)) # 只保留数值型
+
+dat
+
+# 去除全NA、全常数
+valid_vars <- sapply(dat, function(x) !all(is.na(x)) && length(unique(na.omit(x))) > 1)
+dat_clean <- dat[, valid_vars]
+
+# 如果没变量就要重选
+if(ncol(dat_clean) == 0) stop("没有可用于PCA的变量，请重新挑选。")
+
+# 做PCA
+pca <- prcomp(dat_clean, center = TRUE, scale. = TRUE)
+pca_df <- as.data.frame(pca$x[, 1:2])
+pca_df$DIAGNOSIS <- complete_df$DIAGNOSIS
+
+# 画图
+ggplot(pca_df, aes(x = PC1, y = PC2, color = DIAGNOSIS)) +
+  geom_point(alpha = 0.8, size = 2) +
+  theme_minimal() +
+  labs(title = "PCA (Key Quantitative Variables)", x = "PC1", y = "PC2", color = "Diagnosis")
+
+```
+
+```{r}
+# 1. 选择聚类变量（如上）
+check_vars <- c(
+  "SEX", "RACE", "HISPANIC", "EDUC",
+  "C1201D", "C1204A", "C1204B", "C1205A", "C1205B", "C1208A",
+  "C1A106", "C1A107", "C1A108", "BNTPCT", "mattis", "LogMem1_B", "LogMem2_B",
+  "ptau181", "ttau", "AB42", "AB40", "AB42AB40"
+)
+
+# 2. 挑出有这些变量且无缺失的样本
+review_res <- review_complete(Biocard_merged, check_cols = check_vars)
+complete_df <- review_res$complete_df
+
+cat("可用于聚类的样本量:", nrow(complete_df), "\n")
+
+if (nrow(complete_df) < 10) {
+  stop("完整病例太少，建议减少变量数量或允许部分缺失。")
+}
+
+# 3. 筛选numeric型变量 + 性别/民族 (转化为factor或numeric)
+dat <- complete_df[, check_vars]
+
+# 性别、民族转 numeric
+to_numeric <- function(x) {
+  if (is.factor(x)) as.numeric(x) else if (is.character(x)) as.numeric(as.factor(x)) else x
+}
+for (v in c("SEX", "RACE", "HISPANIC")) {
+  if (v %in% names(dat)) dat[[v]] <- to_numeric(dat[[v]])
+}
+
+# 只保留numeric型
+dat_num <- dat[, sapply(dat, is.numeric)]
+
+# 4. 标准化
+dat_scaled <- scale(dat_num)
+
+# 5. PCA
+pca <- prcomp(dat_scaled, center = TRUE, scale. = TRUE)
+pca_df <- as.data.frame(pca$x[, 1:2])
+
+# 6. 聚类（Kmeans）
+set.seed(42)
+km <- kmeans(dat_scaled, centers = 3)
+pca_df$cluster <- factor(km$cluster)
+
+# 7. 可视化（可选加诊断类别）
+if ("DIAGNOSIS" %in% names(complete_df)) {
+  pca_df$DIAGNOSIS <- complete_df$DIAGNOSIS
+  gg <- ggplot(pca_df, aes(x = PC1, y = PC2, color = DIAGNOSIS, shape = cluster)) +
+    geom_point(alpha = 0.8, size = 2) +
+    theme_minimal() +
+    labs(title = "PCA+Kmeans clustering with Diagnosis", x = "PC1", y = "PC2", color = "Diagnosis")
+} else {
+  gg <- ggplot(pca_df, aes(x = PC1, y = PC2, color = cluster)) +
+    geom_point(alpha = 0.8, size = 2) +
+    theme_minimal() +
+    labs(title = "PCA+Kmeans clustering", x = "PC1", y = "PC2")
+}
+
+print(gg)
+
+```
+```{r}
+library(tidyverse)
+library(Rtsne)
+library(ggplot2)
+library(RColorBrewer)
+
+# 1. 变量清单
+check_vars <- c(
+  "SEX", "RACE", "HISPANIC", "EDUC",
+  "C1201D", "C1204A", "C1204B", "C1205A", "C1205B", "C1208A",
+  "C1A106", "C1A107", "C1A108", "BNTPCT", "mattis"
+)
+
+# 2. 获取完整病例
+review_res <- review_complete(Biocard_merged, check_cols = check_vars)
+complete_df <- review_res$complete_df
+cat("可用于聚类的样本量:", nrow(complete_df), "\n")
+
+if (nrow(complete_df) < 10) stop("完整病例太少，建议减少变量数量或允许部分缺失。")
+
+# 3. 分类变量转为 numeric
+dat <- complete_df[, check_vars]
+cat_to_numeric <- function(x) {
+  if (is.factor(x)) as.numeric(x)
+  else if (is.character(x)) as.numeric(as.factor(x))
+  else x
+}
+for (v in c("SEX", "RACE", "HISPANIC")) {
+  if (v %in% names(dat)) dat[[v]] <- cat_to_numeric(dat[[v]])
+}
+dat_num <- dat[, sapply(dat, is.numeric)]
+dat_scaled <- scale(dat_num)
+
+# 4. tSNE降维
+set.seed(42)
+tsne_out <- Rtsne(as.matrix(dat_scaled), dims = 2, perplexity = 30, verbose = TRUE, max_iter = 1000)
+
+# 5. KMeans聚类
+k <- 3
+kmeans_res <- kmeans(tsne_out$Y, centers = k, nstart = 20)
+clusters <- as.factor(kmeans_res$cluster)
+
+# 6. 可视化
+tsne_df <- data.frame(
+  tSNE1 = tsne_out$Y[, 1],
+  tSNE2 = tsne_out$Y[, 2],
+  Cluster = clusters,
+  DIAGNOSIS = if ("DIAGNOSIS" %in% names(complete_df)) complete_df$DIAGNOSIS else NA
+)
+
+ggplot(tsne_df, aes(x = tSNE1, y = tSNE2, color = Cluster)) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_brewer(palette = "Set2") +
+  theme_minimal(base_size = 14) +
+  labs(title = "tSNE + KMeans Cluster on Complete Cases", color = "Cluster")
+
+# 7. 聚类与诊断分布
+if ("DIAGNOSIS" %in% names(complete_df)) {
+  table_res <- table(Cluster = clusters, Diagnosis = complete_df$DIAGNOSIS)
+  print(table_res)
+}
+
+# 8. 可选：聚类中心热图
+library(pheatmap)
+centers <- aggregate(dat_scaled, by = list(Cluster = clusters), mean)
+row.names(centers) <- paste0("Cluster", centers$Cluster)
+centers <- centers[, -1]
+pheatmap(
+  as.matrix(centers),
+  cluster_cols = TRUE,
+  cluster_rows = FALSE,
+  color = colorRampPalette(rev(brewer.pal(7, "RdYlBu")))(100),
+  main = "Cluster Centers (Feature Z-scores)",
+  fontsize_row = 12
+)
+
+
+
+```
+```{r}
+
+table(Biocard_merged$analysis_data$DIAGNOSIS, useNA = "ifany")
+```
+
+
+
 # concordance index 
 ```{r}
 
@@ -206,8 +418,9 @@ complete_output
 # Example with ADNI data
 
 ```{r}
-get_src_table(path = "ADNI Demonstration",)
+get_src_table(path = "ADNI Demonstration")
 ```
+
 ```{r}
 library(dplyr)
 
@@ -228,7 +441,14 @@ DATE_type = "Date",
 timeline_file = "DXSUM",
 dict_src = ADNI_table)
 # 
-ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV))
+complete_ADNI = review_complete(ADNI_merged, check_cols = c("PTGENDER","PTEDUCAT","N1M", "N2M", "N3M", "N4M", "R1M", "R2M", "R3M", "MIFR1M", "MIFR2M", "MIFR3M", "MDFR1M", "MTranM", "MDuraM","GENOTYPE","DIAGNOSIS","ST29SV","ST88SV"))
+data = complete_ADNI$complete_df
+
+complete_ADNI$plot
+
+ADNI_merged$analysis_data
+
+complete_ADNI$complete_df
 
 # ADNI_merged$hold_data %>% distinct(ST153SV.dup)
 # 
@@ -242,8 +462,484 @@ ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3") %>% filter(!is.na(ST88SV)
 # 
 # UCSFFSX6_ADNI_3 %>% filter(RID == 1016)
 
-UCSFFSX6_ADNI_3 %>% filter(RID == 21)
+# Load necessary library
+# library(dplyr)
+# 
+# # Read the datasets
+# img_data <- read.csv("/Users/shijia.zhang/Downloads/df_first_folds.csv")
+# 
+# # Load necessary library
+# library(dplyr)
+# 
+# # Compute Sex distribution by DIAGNOSIS
+# sex_distribution <- img_data %>%
+#   group_by(DIAGNOSIS, Sex) %>%
+#   summarise(Count = n(), .groups = "drop") %>%
+#   mutate(Percentage = (Count / sum(Count)) * 100)
+# 
+# # Compute Age statistics by DIAGNOSIS
+# age_statistics <- img_data %>%
+#   group_by(DIAGNOSIS) %>%
+#   summarise(
+#     Mean_Age = mean(Age, na.rm = TRUE),
+#     Median_Age = median(Age, na.rm = TRUE),
+#     SD_Age = sd(Age, na.rm = TRUE),
+#     Min_Age = min(Age, na.rm = TRUE),
+#     Max_Age = max(Age, na.rm = TRUE),
+#     Count = n(),
+#     .groups = "drop"
+#   )
+# 
+# # Print results
+# print("Sex Distribution by Diagnosis")
+# print(sex_distribution)
+# 
+# print("Age Statistics by Diagnosis")
+# print(age_statistics)
+# 
+# library(dplyr)
+# all_image = read.csv("/Users/shijia.zhang/Downloads/ADNI_screening_baseline_w_csf_data.csv")
+# 
+# all_image %>% distinct(Subject,.keep_all = TRUE)%>%
+#   group_by(Group, Sex) %>%
+#   summarise(Count = n(), .groups = "drop") %>%
+#   mutate(Percentage = (Count / sum(Count)) * 100)
+# 
+# all_image %>% distinct(Subject,.keep_all = TRUE)%>%
+#   group_by(Group) %>%
+#   summarise(
+#     Mean_Age = mean(Age, na.rm = TRUE),
+#     Median_Age = median(Age, na.rm = TRUE),
+#     SD_Age = sd(Age, na.rm = TRUE),
+#     Min_Age = min(Age, na.rm = TRUE),
+#     Max_Age = max(Age, na.rm = TRUE),
+#     Count = n(),
+#     .groups = "drop"
+#   )
+# 
+# 
+# 
+# all_image %>% filter(Image.Data.ID %in% img_data$Image.ID) %>% distinct(Subject)
 ```
+
+```{r}
+print(age_statistics)
+```
+
+```{r}
+library(dplyr)
+library(ADMerge)
+
+ADNI_table = get_src_table(path = "ami2_files",
+                           ID_usr_list = c("PTID","group_id"),
+                           DATE_usr_list = c("VISDATE","Acq.Date"),
+                           IS_overlap_list = c("FALSE"),
+                           WINDOW_list = c(366))
+
+ADNI_table
+
+plot_files(path = "ami2_files", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+df_first_folds
+
+ADNI_merged = ad_merge(path = "ami2_files",
+DATE_type = "Date",
+timeline_file = "df_first_folds",
+dict_src = ADNI_table)
+
+merged_folds = ADNI_merged$analysis_data %>% select(c("ID_merged","Date_timeline","Image.ID","Sex","Age","DIAGNOSIS","linear_registered_path","non_linear_registered_path","syn_jacobian","fold","CDGLOBAL","MMSCORE"))
+
+merged_folds
+
+
+summary_stats <- merged_folds %>%
+  group_by(DIAGNOSIS) %>%
+  summarise(
+    n = n(),
+    avg_Age = mean(Age, na.rm = TRUE),
+    avg_MMSCORE = mean(MMSCORE, na.rm = TRUE),
+    avg_global = mean(CDGLOBAL, na.rm = TRUE),
+    male_count = sum(Sex == "M", na.rm = TRUE),
+    female_count = sum(Sex == "F", na.rm = TRUE)
+  )
+
+print(summary_stats)
+
+filtered_cases <- merged_folds %>%
+  filter(
+    (DIAGNOSIS == 1 & CDGLOBAL != 0) |
+    (DIAGNOSIS == 2 & CDGLOBAL != 0.5) |
+    (DIAGNOSIS == 3 & CDGLOBAL < 1)
+  )
+# To view the filtered cases:
+filtered_cases %>% select(Image.ID,DIAGNOSIS,CDGLOBAL)
+
+
+
+merged_folds %>% select(Image.ID,DIAGNOSIS,CDGLOBAL,MMSCORE)
+```
+
+```{r}
+adni_screening = read.csv("/Users/shijia.zhang/Desktop/adni_screening.csv")
+
+adni_screening_unique <- adni_screening[!duplicated(adni_screening$Subject, fromLast = TRUE), ]
+
+
+ADNI_table = get_src_table(path = "aim2_sc",
+                           ID_usr_list = c("PTID","Subject"),
+                           DATE_usr_list = c("VISDATE","Acq.Date"),
+                           IS_overlap_list = c("FALSE"),
+                           WINDOW_list = c(366))
+
+sc_data %>% filter(Image.Data.ID %in% adni_screening$Image.Data.ID) 
+
+
+ADNI_merged = ad_merge(path = "aim2_sc",
+DATE_type = "Date",
+timeline_file = "adni_screening",
+dict_src = ADNI_table)
+
+analysis_data = ADNI_merged$analysis_data
+
+analysis_data = analysis_data %>% select(ID_merged,Date_timeline,Image.Data.ID,Group,Sex,Age,CDGLOBAL,MMSCORE)
+
+summary_stats <- analysis_data %>%
+  group_by(Group) %>%
+  summarise(
+    n = n(),
+    avg_Age = mean(Age, na.rm = TRUE),
+    avg_CDGLOBAL = mean(CDGLOBAL, na.rm = TRUE),
+    avg_MMSCORE = mean(MMSCORE, na.rm = TRUE),
+    male_count = sum(Sex == "M", na.rm = TRUE),
+    female_count = sum(Sex == "F", na.rm = TRUE)
+  )
+
+print(summary_stats)
+
+
+filtered_cases <- analysis_data %>%
+  filter(
+    (Group == "CN" & CDGLOBAL != 0) |
+    (Group == "MCI" & CDGLOBAL != 0.5) |
+    (Group == "AD" & CDGLOBAL < 1)
+  )
+# To view the filtered cases:
+filtered_cases %>% select(ID_merged,Group,CDGLOBAL)
+
+
+summary_stats
+analysis_data
+```
+
+
+
+```{r}
+baseline_all = read.csv("/Users/shijia.zhang/Downloads/ADNI_screening_baseline_w_csf_data_365_02162024 (2).csv")
+
+
+
+img_data <- read.csv("/Users/shijia.zhang/Downloads/df_first_folds.csv")
+
+# Load necessary library
+library(dplyr)
+
+# Ensure baseline_all has unique Subject-dx pairs
+# Load necessary library
+library(dplyr)
+
+# Ensure baseline_all has unique Subject-dx pairs
+baseline_unique <- baseline_all %>%
+  distinct(Subject, dx, .keep_all = TRUE)
+
+# Merge img_data and baseline_all by Subject (group_id in img_data)
+merged_data <- img_data %>%
+  select(group_id, DIAGNOSIS) %>%  # Keep relevant columns
+  inner_join(baseline_unique, by = c("group_id" = "Subject"))
+
+# Check how many match and mismatch
+match_count <- merged_data %>%
+  filter(DIAGNOSIS == dx) %>%
+  nrow()
+
+mismatch_count <- merged_data %>%
+  filter(DIAGNOSIS != dx) %>%
+  nrow()
+
+# Identify mismatched cases
+mismatched_cases <- merged_data %>%
+  filter(DIAGNOSIS != dx)
+
+# Print results
+print(paste("Number of matches:", match_count))
+print(paste("Number of mismatches:", mismatch_count))
+
+# Print mismatched dx values
+print("Mismatched dx values:")
+print(mismatched_cases$dx)
+
+# Print mismatched DIAGNOSIS values
+print("Mismatched DIAGNOSIS values:")
+print(mismatched_cases$DIAGNOSIS)
+
+
+```
+
+
+```{r}
+library(dplyr)
+library(caret)
+library(randomForest)
+library(e1071)
+library(dplyr)
+library(caret)
+library(randomForest)
+library(pROC)
+
+```
+
+```{r}
+# Extract the complete dataset
+data <- complete_ADNI$complete_df
+# Remove all visits with DIAGNOSIS == 3
+data <- data %>% filter(DIAGNOSIS != 3)
+
+# Get IDs of patients who transitioned to MCI
+mci_patients <- data %>%
+  filter(DIAGNOSIS == 2) %>%
+  pull(ID_merged) %>%
+  unique()
+
+# For each MCI patient, find the first MCI diagnosis date
+first_mci_dates <- data %>%
+  filter(ID_merged %in% mci_patients, DIAGNOSIS == 2) %>%
+  group_by(ID_merged) %>%
+  summarize(first_mci_date = min(Date_timeline))
+
+
+
+# Merge first MCI dates back into data
+data <- data %>%
+  left_join(first_mci_dates, by = "ID_merged")
+
+# Select visits before the first MCI diagnosis
+pre_mci_data <- data %>%
+  filter(DIAGNOSIS == 1, Date_timeline < first_mci_date)
+
+# Get the last visit before MCI for each patient
+positive_cases <- pre_mci_data %>%
+  group_by(ID_merged) %>%
+  filter(Date_timeline == max(Date_timeline)) %>%
+  ungroup()
+
+# Get IDs of control patients
+control_patients <- data %>%
+  group_by(ID_merged) %>%
+  filter(all(DIAGNOSIS == 1)) %>%
+  pull(ID_merged) %>%
+  unique()
+
+# Get the last visit for control patients
+control_data <- data %>%
+  filter(ID_merged %in% control_patients) %>%
+  group_by(ID_merged) %>%
+  filter(Date_timeline == max(Date_timeline)) %>%
+  ungroup()
+
+num_positive <- nrow(positive_cases)
+set.seed(123)  # For reproducibility
+control_sample <- control_data %>%
+  sample_n(num_positive * 2)
+
+positive_cases <- positive_cases %>% mutate(label = 1)
+control_sample <- control_sample %>% mutate(label = 0)
+
+
+predictor_vars <- c("N1M", "N2M", "N3M", "N4M", "R1M", "R2M", "R3M",
+                    "MIFR1M", "MIFR2M", "MIFR3M", "MDFR1M", "MTranM",
+                    "MDuraM", "GENOTYPE", "ST29SV", "ST88SV", "PTGENDER", "PTEDUCAT")
+
+final_data <- bind_rows(positive_cases, control_sample)
+
+final_data <- final_data %>%
+  select(ID_merged, all_of(predictor_vars), label)
+
+final_data$GENOTYPE <- as.factor(final_data$GENOTYPE)
+final_data$PTGENDER <- as.factor(final_data$PTGENDER)
+final_data$label <- as.factor(final_data$label)
+
+
+
+
+```
+
+```{r}
+
+# Load necessary libraries
+library(dplyr)
+library(caret)
+library(pROC)
+library(randomForest)
+library(e1071)
+library(gbm)
+
+# Assume 'final_data' is available from previous steps
+# Convert label to factor with appropriate levels
+final_data$label <- factor(final_data$label, levels = c(0, 1), labels = c("Control", "MCI"))
+
+# Set up cross-validation control
+set.seed(123)  # For reproducibility
+cv_control <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  savePredictions = "final"
+)
+
+### **Model 1: Random Forest**
+
+# Train Random Forest model with cross-validation
+set.seed(456)
+rf_cv_model <- train(
+  label ~ .,
+  data = final_data[, -1],  # Exclude ID_merged column
+  method = "rf",
+  trControl = cv_control,
+  metric = "ROC",
+  tuneLength = 5
+)
+
+# Extract best ROC AUC
+rf_best <- rf_cv_model$results[which.max(rf_cv_model$results$ROC), ]
+rf_best$Model <- "Random Forest"
+
+### **Model 2: Support Vector Machine (SVM)**
+
+# Train SVM model with cross-validation
+set.seed(456)
+svm_cv_model <- train(
+  label ~ .,
+  data = final_data[, -1],
+  method = "svmRadial",
+  trControl = cv_control,
+  metric = "ROC",
+  tuneLength = 5
+)
+
+# Extract best ROC AUC
+svm_best <- svm_cv_model$results[which.max(svm_cv_model$results$ROC), ]
+svm_best$Model <- "SVM"
+
+### **Model 3: Logistic Regression**
+
+# Train Logistic Regression model with cross-validation
+set.seed(456)
+glm_cv_model <- train(
+  label ~ .,
+  data = final_data[, -1],
+  method = "glm",
+  family = binomial,
+  trControl = cv_control,
+  metric = "ROC"
+)
+
+# Extract ROC AUC
+glm_best <- glm_cv_model$results
+glm_best$Model <- "Logistic Regression"
+
+### **Model 4: Gradient Boosting Machine (GBM)**
+
+# Train GBM model with cross-validation
+# set.seed(456)
+# gbm_cv_model <- train(
+#   label ~ .,
+#   data = final_data[, -1],
+#   method = "gbm",
+#   trControl = cv_control,
+#   metric = "ROC",
+#   verbose = FALSE,
+#   tuneLength = 5
+# )
+
+# Extract best ROC AUC
+# gbm_best <- gbm_cv_model$results[which.max(gbm_cv_model$results$ROC), ]
+# gbm_best$Model <- "GBM"
+
+### **Compile Best Results**
+
+# Select relevant columns and bind the best results together
+best_results <- bind_rows(
+  rf_best %>% select(Model, ROC, Sens, Spec,ROCSD,SpecSD),
+  svm_best %>% select(Model, ROC, Sens, Spec,ROCSD,SpecSD),
+  glm_best %>% select(Model, ROC, Sens, Spec,ROCSD,SpecSD),
+  # gbm_best %>% select(Model, ROC, Sens, Spec,ROCSD,SpecSD)
+)
+
+print("Best Cross-Validated Performance Metrics:")
+print(best_results)
+
+### **Plot ROC Curves Together**
+
+# Function to extract ROC data for plotting
+get_roc_data <- function(model, model_name) {
+  preds <- model$pred
+  if ("mtry" %in% colnames(preds)) {
+    # For Random Forest, filter predictions for best mtry
+    best_param <- model$bestTune$mtry
+    preds <- preds[preds$mtry == best_param, ]
+  } else if ("C" %in% colnames(preds)) {
+    # For SVM, filter predictions for best cost parameter
+    best_param <- model$bestTune$C
+    preds <- preds[preds$C == best_param, ]
+  } else if ("n.trees" %in% colnames(preds)) {
+    # For GBM, filter predictions for best n.trees
+    best_param <- model$bestTune$n.trees
+    preds <- preds[preds$n.trees == best_param, ]
+  }
+  roc_obj <- roc(response = preds$obs, predictor = preds$MCI, levels = rev(levels(preds$obs)))
+  roc_df <- data.frame(
+    FalsePositiveRate = 1 - roc_obj$specificities,
+    TruePositiveRate = roc_obj$sensitivities,
+    Model = model_name
+  )
+  return(roc_df)
+}
+
+# Get ROC data for each model
+roc_rf <- get_roc_data(rf_cv_model, "Random Forest")
+roc_svm <- get_roc_data(svm_cv_model, "SVM")
+roc_glm <- get_roc_data(glm_cv_model, "Logistic Regression")
+# roc_gbm <- get_roc_data(gbm_cv_model, "GBM")
+
+# Combine ROC data
+roc_data <- bind_rows(roc_rf, roc_svm, roc_glm)
+
+# Plot ROC curves
+library(ggplot2)
+ggplot(roc_data, aes(x = FalsePositiveRate, y = TruePositiveRate, color = Model)) +
+  geom_line(size = 1) +
+  geom_abline(linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "ROC Curves for Different Models", x = "False Positive Rate", y = "True Positive Rate") +
+  theme(legend.position = "bottom")
+
+
+```
+
+```{r}
+data %>% filter(ID_merged == 22) %>% select(Date_timeline,DIAGNOSIS)
+
+final_data$label <- factor(final_data$label, levels = c(0, 1), labels = c("Control", "MCI"))
+best_results %>% kable() %>% kable_styling(latex_options = c("striped", "hold_position"))
+```
+
+```{r}
+final_data
+```
+
+
+
+
 # ADNI example
 
 ```{r}
@@ -252,7 +948,7 @@ ADNI_table = get_src_table(path = "ADNI Demonstration",
                            DATE_usr_list = c("VISDATE","EXAMDATE","VISDATE","EXAMDATE"),
                            non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
                            IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE"),
-                           WINDOW_list = c(366,366,366,732,366,366))
+                           WINDOW_list = c(366,366,366,1830,366,366))
 
 ADNI_table
 
@@ -267,14 +963,16 @@ ADNI_merged$analysis_data %>% filter(PHASE == "ADNI3")
 
 ADNI_merged$analysis_data$MMSCORE
 
-MMSCORE
+ADNI_merged$analysis_data
 
-review_complete(ADNI_merged, check_cols = c("MMSCORE","GENOTYPE","DIAGNOSIS","ST29SV","ST88SV"))
+complete_ADNI = review_complete(ADNI_merged, check_cols = c("N1M", "N2M", "N3M", "N4M", "R1M", "R2M", "R3M", "MIFR1M", "MIFR2M", "MIFR3M", "MDFR1M", "MTranM", "MDuraM","GENOTYPE","DIAGNOSIS","ST29SV","ST88SV"))
+
+complete_ADNI$complete_df %>% filter(DIAGNOSIS == 1)
+
+
 ```
 
 ```{r}
-source("/Users/shijia.zhang/Desktop/ADNI/ADMerge/R/adm_main.R")
-source("/Users/shijia.zhang/Desktop/ADNI/ADMerge/R/adm_helper.R")
 
 
 library(dplyr)
@@ -344,6 +1042,7 @@ print("Final Data Frame after coalesce:")
 print(df_joined)
 
 ```
+
 ```{r}
 # Load necessary library
 library(dplyr)
@@ -441,6 +1140,427 @@ df_joined <- df_joined %>% select(-ends_with(".df2"))
 # View the final data frame
 print("Final Data Frame after coalesce:")
 print(df_joined)
+
+```
+```{r}
+library(tidyverse)
+y <- c(1, 2, NA, NA, 5)
+z <- c(NA, NA, 3, 4, 5)
+coalesce(y, z)
+```
+
+
+```{r}
+library(dplyr)
+
+
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366))
+
+
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+DATE_type = "Date",
+timeline_file = "DXSUM",
+dict_src = ADNI_table)
+
+complete_ADNI = review_complete(ADNI_merged, check_cols = c("GENOTYPE","DIAGNOSIS","N1M","N2M","N3M","N4M","R1M","R2M","R3M",
+                    "MIFR1M","MIFR2M","MIFR3M","MDFR1M","MTranM","MDuraM",
+                    "GENOTYPE","ST29SV","ST88SV","PTGENDER","PTEDUCAT"
+                    ))
+
+# Extract the complete dataset
+data <- complete_ADNI$complete_df
+# Remove all visits with DIAGNOSIS == 3
+data <- data %>% filter(DIAGNOSIS != 3)
+
+# Get IDs of patients who transitioned to MCI
+mci_patients <- data %>%
+  filter(DIAGNOSIS == 2) %>%
+  pull(ID_merged) %>%
+  unique()
+
+# For each MCI patient, find the first MCI diagnosis date
+first_mci_dates <- data %>%
+  filter(ID_merged %in% mci_patients, DIAGNOSIS == 2) %>%
+  group_by(ID_merged) %>%
+  summarize(first_mci_date = min(Date_timeline))
+
+
+# Merge first MCI dates back into data
+data <- data %>%
+  left_join(first_mci_dates, by = "ID_merged")
+
+# Select visits before the first MCI diagnosis
+pre_mci_data <- data %>%
+  filter(DIAGNOSIS == 1, Date_timeline < first_mci_date)
+
+# Get the last visit before MCI for each patient
+positive_cases <- pre_mci_data %>%
+  group_by(ID_merged) %>%
+  filter(Date_timeline == max(Date_timeline)) %>%
+  ungroup()
+
+# Get IDs of control patients
+control_patients <- data %>%
+  group_by(ID_merged) %>%
+  filter(all(DIAGNOSIS == 1)) %>%
+  pull(ID_merged) %>%
+  unique()
+
+# Get the last visit for control patients
+control_data <- data %>%
+  filter(ID_merged %in% control_patients) %>%
+  group_by(ID_merged) %>%
+  filter(Date_timeline == max(Date_timeline)) %>%
+  ungroup()
+
+num_positive <- nrow(positive_cases)
+set.seed(123)  # For reproducibility
+control_sample <- control_data %>%
+  sample_n(num_positive * 2)
+
+positive_cases <- positive_cases %>% mutate(label = 1)
+control_sample <- control_sample %>% mutate(label = 0)
+
+
+# ------- 前置：final_data 结构要求 -------
+# 必须包含：ID_merged, 多个预测变量, label（因子：Control/MCI）
+# 如果 control 数量 < 2 * positive 数量，下面代码会自动放宽采样
+
+library(dplyr)
+library(recipes)
+library(caret)
+library(pROC)
+library(ggplot2)
+
+## 1) 基础检查：变量是否都存在 + NA 概览
+predictor_vars <- c("N1M","N2M","N3M","N4M","R1M","R2M","R3M",
+                    "MIFR1M","MIFR2M","MIFR3M","MDFR1M","MTranM","MDuraM",
+                    "GENOTYPE","ST29SV","ST88SV","PTGENDER","PTEDUCAT")
+
+missing_vars <- setdiff(predictor_vars, names(final_data))
+if (length(missing_vars) > 0) {
+  message("⚠️ 以下变量在 final_data 中不存在：\n", paste(missing_vars, collapse = ", "))
+  # 你可以在此选择 stop()，或从列表里移除缺失变量后继续
+  predictor_vars <- intersect(predictor_vars, names(final_data))
+}
+
+# 只保留需要的列，并确保 label 是二分类因子
+final_data <- final_data %>%
+  select(ID_merged, all_of(predictor_vars), label)
+
+# 2) 把正类(MCI)设为因子第一水平（caret 的 twoClassSummary 会把第一水平当作“事件”）
+final_data$label <- factor(final_data$label, levels = c("MCI", "Control"))
+
+# 3) 先粗查缺失：看看哪些变量 NA 比较多
+na_counts <- colSums(is.na(final_data))
+print(na_counts)
+
+# 4) 用 recipes 做一个“一条龙”配方：
+#    - 把 ID_merged 标记为 ID，不参与建模
+#    - 数值型用中位数插补；分类型用众数插补（或新增 Unknown）
+#    - 去掉近零方差特征
+#    - 分类型 One-Hot
+#    - 数值特征中心化/标准化
+rec <- recipe(label ~ ., data = final_data) %>%
+  update_role(ID_merged, new_role = "ID") %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%   # 若更偏好显式“Unknown”，可改用 step_unknown()
+  step_nzv(all_predictors()) %>%
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+  step_center(all_numeric_predictors()) %>%
+  step_scale(all_numeric_predictors())
+
+# 5) 交叉验证控制：用 ROC 作为评估指标
+set.seed(123)
+cv_control <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,  # 计算 ROC/Sens/Spec
+  savePredictions = "final",
+  verboseIter = FALSE
+)
+
+# 6) 训练四个模型：RF / SVM / GLM / GBM
+set.seed(456)
+rf_cv_model <- train(
+  rec, data = final_data,
+  method = "rf",
+  trControl = cv_control,
+  metric = "ROC",
+  tuneLength = 5
+)
+
+set.seed(456)
+svm_cv_model <- train(
+  rec, data = final_data,
+  method = "svmRadial",
+  trControl = cv_control,
+  metric = "ROC",
+  tuneLength = 5
+)
+
+set.seed(456)
+glm_cv_model <- train(
+  rec, data = final_data,
+  method = "glm",
+  family = binomial,
+  trControl = cv_control,
+  metric = "ROC"
+)
+
+set.seed(456)
+gbm_cv_model <- train(
+  rec, data = final_data,
+  method = "gbm",
+  trControl = cv_control,
+  metric = "ROC",
+  verbose = FALSE,
+  tuneLength = 5
+)
+
+# 7) 汇总最优结果
+rf_best  <- rf_cv_model$results[which.max(rf_cv_model$results$ROC), ]
+svm_best <- svm_cv_model$results[which.max(svm_cv_model$results$ROC), ]
+glm_best <- glm_cv_model$results[nrow(glm_cv_model$results), ]  # glm 没有调参网格，直接取这一行
+gbm_best <- gbm_cv_model$results[which.max(gbm_cv_model$results$ROC), ]
+
+best_results <- bind_rows(
+  rf_best  %>% transmute(Model = "Random Forest", ROC, Sens, Spec, ROCSD, SpecSD),
+  svm_best %>% transmute(Model = "SVM",           ROC, Sens, Spec, ROCSD, SpecSD),
+  glm_best %>% transmute(Model = "Logistic Regression", ROC, Sens, Spec, ROCSD = NA_real_, SpecSD = NA_real_),
+  gbm_best %>% transmute(Model = "GBM",           ROC, Sens, Spec, ROCSD, SpecSD)
+)
+print("Best Cross-Validated Performance Metrics:")
+print(best_results)
+
+# 8) 画 ROC（确保只取各自最优调参组合的预测）
+get_roc_df <- function(model, name){
+  preds <- model$pred
+  # 过滤到最优调参
+  tune_cols <- intersect(names(preds), names(model$bestTune))
+  if (length(tune_cols) > 0) {
+    for (tc in tune_cols) {
+      preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+    }
+  }
+  # caret 的 prob 列名是正类的名字（这里是 "MCI"）
+  roc_obj <- pROC::roc(response = preds$obs, predictor = preds$MCI, levels = levels(preds$obs), direction = "<")
+  data.frame(FPR = 1 - roc_obj$specificities,
+             TPR = roc_obj$sensitivities,
+             Model = name)
+}
+roc_df <- bind_rows(
+  get_roc_df(rf_cv_model,  "Random Forest"),
+  get_roc_df(svm_cv_model, "SVM"),
+  get_roc_df(glm_cv_model, "Logistic Regression"),
+  get_roc_df(gbm_cv_model, "GBM")
+)
+
+ggplot(roc_df, aes(x = FPR, y = TPR, color = Model)) +
+  geom_line(size = 1) +
+  geom_abline(linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "ROC Curves (CV) — Positive Class: MCI",
+       x = "False Positive Rate", y = "True Positive Rate") +
+  theme(legend.position = "bottom")
+
+
+```
+
+
+
+```{r}
+library(dplyr)
+library(recipes)
+library(caret)
+library(pROC)
+library(ggplot2)
+
+# -------- 0) 数据准备 --------
+ADNI_table = get_src_table(
+  path = "ADNI Demonstration",
+  ID_usr_list   = c("RID"),
+  DATE_usr_list = c("EXAMDATE","VISDATE"),
+  non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+  IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
+  WINDOW_list    = c(366,366,366,1830,366,366,366,366)
+)
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI", date_type = "Date")
+
+ADNI_merged = ad_merge(
+  path = "ADNI_Demonstration",
+  DATE_type = "Date",
+  timeline_file = "DXSUM",
+  dict_src = ADNI_table
+)
+
+complete_ADNI = review_complete(
+  ADNI_merged,
+  check_cols = c("GENOTYPE","DIAGNOSIS","ST29SV","ST88SV",
+                 "N1M","N2M","N3M","N4M","R1M","R2M","R3M",
+                 "MIFR1M","MIFR2M","MIFR3M","MDFR1M","MTranM","MDuraM",
+                 "PTGENDER","PTEDUCAT")
+)
+
+data <- complete_ADNI$complete_df %>%
+  filter(DIAGNOSIS != 3)   # 只留 CN / MCI
+
+# -------- 1) 基线 = 每个受试者“最早 CN”行 --------
+# 不用 rename()，改用 select(..., baseline_date = Date_timeline) 避免函数遮蔽问题
+baseline_dates <- data %>%
+  filter(DIAGNOSIS == 1, !is.na(Date_timeline)) %>%
+  group_by(ID_merged) %>%
+  slice_min(order_by = Date_timeline, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, baseline_date = Date_timeline)
+
+# 把这张“基线日期表”并回 CN 行，得到基线行（每个 ID 一行）
+baseline_df <- data %>%
+  inner_join(baseline_dates, by = "ID_merged") %>%
+  filter(DIAGNOSIS == 1, Date_timeline == baseline_date)
+
+# -------- 2) 标注是否在基线之后转为 MCI（无泄漏）--------
+later_mci_ids <- data %>%
+  inner_join(baseline_dates, by = "ID_merged") %>%
+  filter(!is.na(Date_timeline), Date_timeline > baseline_date, DIAGNOSIS == 2) %>%
+  distinct(ID_merged) %>%
+  pull(ID_merged)
+
+baseline_df <- baseline_df %>%
+  mutate(label = ifelse(ID_merged %in% later_mci_ids, 1L, 0L))
+
+# -------- 3) 采样（1:2，若不够则全取）--------
+set.seed(123)
+positive_cases <- baseline_df %>% filter(label == 1L)
+control_cases  <- baseline_df %>% filter(label == 0L)
+
+num_pos <- nrow(positive_cases)
+if (num_pos == 0) {
+  stop("没有任何基线 CN 之后转为 MCI 的阳性样本（label==1）。请检查 DIAGNOSIS 编码或时间戳。")
+}
+num_neg <- min(nrow(control_cases), 2 * num_pos)
+
+control_sample <- if (num_neg > 0) control_cases %>% slice_sample(n = num_neg) else control_cases[0, ]
+
+final_df <- bind_rows(positive_cases, control_sample)
+
+# -------- 4) 特征选择 + 因子化（不把 baseline_date 带进模型，避免泄漏）--------
+predictor_vars <- c("N1M","N2M","N3M","N4M","R1M","R2M","R3M",
+                    "MIFR1M","MIFR2M","MIFR3M","MDFR1M","MTranM","MDuraM",
+                    "GENOTYPE","ST29SV","ST88SV","PTGENDER","PTEDUCAT")
+
+final_data <- final_df %>%
+  select(ID_merged, all_of(predictor_vars), label)
+
+# label: MCI 为正类
+final_data$label <- factor(ifelse(final_data$label == 1L, "MCI", "Control"),
+                           levels = c("MCI","Control"))
+
+# -------- 5) recipes 处理 --------
+rec <- recipe(label ~ ., data = final_data) %>%
+  update_role(ID_merged, new_role = "ID") %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%
+  step_nzv(all_predictors()) %>%
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+  step_center(all_numeric_predictors()) %>%
+  step_scale(all_numeric_predictors())
+
+# -------- 6) CV 设置 --------
+set.seed(123)
+cv_control <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  savePredictions = "final"
+)
+
+# -------- 7) 模型训练 --------
+set.seed(42)
+rf_model <- train(rec, data = final_data, method = "rf",
+                  trControl = cv_control, metric = "ROC", tuneLength = 5)
+
+set.seed(42)
+svm_model <- train(rec, data = final_data, method = "svmRadial",
+                   trControl = cv_control, metric = "ROC", tuneLength = 5)
+
+set.seed(42)
+glm_model <- train(rec, data = final_data, method = "glm", family = binomial(),
+                   trControl = cv_control, metric = "ROC")
+
+set.seed(42)
+gbm_model <- train(rec, data = final_data, method = "gbm",
+                   trControl = cv_control, metric = "ROC",
+                   verbose = FALSE, tuneLength = 5)
+
+# -------- 8) 结果汇总 --------
+rf_best  <- rf_model$results[which.max(rf_model$results$ROC), ]
+svm_best <- svm_model$results[which.max(svm_model$results$ROC), ]
+glm_best <- glm_model$results[nrow(glm_model$results), ]
+gbm_best <- gbm_model$results[which.max(gbm_model$results$ROC), ]
+
+best_results <- bind_rows(
+  rf_best  %>% transmute(Model = "Random Forest", ROC, Sens, Spec),
+  svm_best %>% transmute(Model = "SVM",           ROC, Sens, Spec),
+  glm_best %>% transmute(Model = "Logistic Regression", ROC, Sens, Spec),
+  gbm_best %>% transmute(Model = "GBM",           ROC, Sens, Spec)
+)
+
+print("Best Cross-Validated Performance Metrics:")
+print(best_results)
+
+# -------- 9) ROC 曲线 --------
+get_roc_df <- function(model, name){
+  preds <- model$pred
+  tune_cols <- intersect(names(preds), names(model$bestTune))
+  if (length(tune_cols) > 0){
+    for (tc in tune_cols) preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+  }
+  roc_obj <- roc(response = preds$obs, predictor = preds$MCI,
+                 levels = levels(preds$obs), direction = "<")
+  data.frame(FPR = 1 - roc_obj$specificities,
+             TPR = roc_obj$sensitivities,
+             Model = name)
+}
+
+roc_df <- bind_rows(
+  get_roc_df(rf_model,  "Random Forest"),
+  get_roc_df(svm_model, "SVM"),
+  get_roc_df(glm_model, "Logistic Regression"),
+  get_roc_df(gbm_model, "GBM")
+)
+
+ggplot(roc_df, aes(x = FPR, y = TPR, color = Model)) +
+  geom_line(size = 1) +
+  geom_abline(linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "ROC Curves (Baseline = First CN; Positive = Later MCI)",
+       x = "False Positive Rate", y = "True Positive Rate") +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+first_cn_dates <- data %>%
+  filter(DIAGNOSIS == 1) %>%
+  group_by(ID_merged)
+
+first_cn_dates <- data %>%
+  filter(DIAGNOSIS == 1) 
+
+data %>% filter(DIAGNOSIS == 1)
+
+final_data
 
 ```
 

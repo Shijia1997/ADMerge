@@ -781,8 +781,17 @@ plot_c1208
 plot_c1204
 
 ```
+```{r}
+
+biocard_plot_files = plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+```
 
 ```{r}
+
+BIOCARD_table
+library(jsonlite)
+cat(toJSON(BIOCARD_table, pretty = TRUE, auto_unbox = TRUE))
 # ==== 0. 加载必要包 ====
 library(dplyr)
 library(survival)
