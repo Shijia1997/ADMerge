@@ -12,12 +12,20 @@ ADNI_table = get_src_table(path = "ADNI_demonstration_multi_site",
                            ID_usr_list = c("RID"),
                            DATE_usr_list = c("EXAMDATE","VISDATE","SCANDATE"),
                            non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
-                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE"),
-                           WINDOW_list = c(366,366,366,1830,366,366,366,366,366,366,366,366))
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366,366))
 
 ADNI_table
 
-plot_files(path = "ADNI_demonstration_multi_site", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+adni_plot_files = plot_files(path = "ADNI_demonstration_multi_site", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+
+
+htmltools::save_html(
+  adni_plot_files,
+  file = "adni_plot_files.html",
+  libdir = "lib_adni"
+)
 ```
 
 ```{r}
@@ -785,7 +793,8 @@ plot_c1204
 
 biocard_plot_files = plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
 
-htmlwidgets::saveWidget(biocard_plot_files, "biocard_plot_files.html", selfcontained = TRUE)
+htmltools::save_html(biocard_plot_files, file = "biocard_plot_files.html", libdir = "lib")
+
 class(biocard_plot_files)
 ```
 
