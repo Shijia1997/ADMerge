@@ -283,6 +283,1201 @@ ggplot(roc_df, aes(x = FPR, y = TPR, color = Model)) +
 ```
 
 
+```{r}
+library(dplyr)
+library(caret)
+library(pROC)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+library(devtools)
+install_github("Shijia1997/ADMerge",force = TRUE)
+
+library(ADMerge)
+# library(dplyr)
+library(knitr)
+# library(readxl)
+library(kableExtra)
+```
+
+
+```{r}
+
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366))
+
+
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+```
+
+```{r}
+library(dplyr)
+library(caret)
+library(pROC)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+library(devtools)
+
+
+library(ADMerge)
+# library(dplyr)
+library(knitr)
+# library(readxl)
+library(kableExtra)
+
+
+
+
+
+
+
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE"),
+                           WINDOW_list = c(366))
+
+ADNI_table
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+DATE_type = "Date",
+timeline_file = "ADNI_Cognitive",
+dict_src = ADNI_table)
+# 
+
+complete_ADNI = review_complete(ADNI_merged, check_cols = c(
+  # ---- 基本 ID / 时间 ----
+  "ID_merged",      # 合并后的受试者 ID
+  "Date_timeline",  # 时间线日期
+  "VISCODE",        # 访问代码 (如 bl, m06, m12)
+  "VISCODE2",       # 扩展访问代码
+  
+  # ---- 人口学 / 遗传 ----
+  "PTGENDER",       # 性别
+  "PTEDUCAT",       # 受教育年限
+  "GENOTYPE",       # APOE 基因型
+  
+  # ---- 诊断 ----
+  "DIAGNOSIS",      # 诊断 (CN / MCI / AD)
+  
+  # ---- 认知 / 临床 ----
+  "N1M",            # Word List Learning Immediate Recall (平均分)
+  "MMSCORE",        # Mini-Mental State Exam (MMSE 总分)
+  
+  # ---- MRI 结构体积 ----
+  "ST29SV",         # 左海马体积
+  "ST88SV",         # 右海马体积
+  "ST109TS"         # 脑室体积 (Ventricles total volume/score)
+))
+
+
+#
+data = complete_ADNI$complete_df
+
+data_sorted <- data %>% arrange(ID_merged, Date_timeline)
+
+mci_visits <- data_sorted %>% filter(DIAGNOSIS == 2)
+ad_visits  <- data_sorted %>% filter(DIAGNOSIS == 3)
+
+mci_to_ad_ids <- mci_visits %>%
+  inner_join(ad_visits, by = "ID_merged") %>%
+  filter(Date_timeline.x < Date_timeline.y) %>%
+  distinct(ID_merged) %>%
+  pull(ID_merged)
+
+cat("✅ 找到 MCI → AD 受试者人数:", length(mci_to_ad_ids), "\n")
+
+mci_baseline <- mci_visits %>%
+  group_by(ID_merged) %>%
+  slice(1) %>%
+  ungroup()
+
+mci_labeled <- mci_baseline %>%
+  mutate(label = ifelse(ID_merged %in% mci_to_ad_ids, 1, 0))
+
+set.seed(42)
+positive_df <- mci_labeled %>% filter(label == 1)
+negative_df <- mci_labeled %>% filter(label == 0) %>% sample_n(128)
+model_df <- bind_rows(positive_df, negative_df)
+
+predictor_vars <- c("PTGENDER", "PTEDUCAT", "GENOTYPE",
+                    "N1M", "MMSCORE", "ST29SV", "ST88SV", "ST109TS")
+
+model_data <- model_df %>%
+  select(all_of(predictor_vars), label) %>%
+  na.omit()
+
+model_data$label <- factor(ifelse(model_data$label == 1, "Progressor", "Stable"),
+                           levels = c("Progressor", "Stable"))
+
+# --------------------- #
+# 🔄 CV 设置
+# --------------------- #
+cv_control <- trainControl(
+  method = "cv", number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  savePredictions = "final"
+)
+
+# --------------------- #
+# ⚙️ 模型训练
+# --------------------- #
+set.seed(123)
+glm_model <- train(label ~ ., data = model_data,
+                   method = "glm", family = binomial(),
+                   trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+rf_model <- train(label ~ ., data = model_data,
+                  method = "rf", tuneLength = 5,
+                  trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+gbm_model <- train(label ~ ., data = model_data,
+                   method = "gbm", verbose = FALSE, tuneLength = 5,
+                   trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+xgb_model <- train(label ~ ., data = model_data,
+                   method = "xgbTree", tuneLength = 5,
+                   trControl = cv_control, metric = "ROC")
+
+# ----------------------------- #
+# 📊 提取性能指标（含 AUC_SD）
+# ----------------------------- #
+suppress_predict <- function(model, name){
+  suppressWarnings({
+    preds <- model$pred
+    tune_cols <- intersect(names(preds), names(model$bestTune))
+    
+    # 只保留最佳超参数组合
+    if (length(tune_cols) > 0){
+      for (tc in tune_cols){
+        preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+      }
+    }
+
+    # 每折 confusion matrix
+    cm_list <- lapply(split(preds, preds$Resample), function(df){
+      cm <- confusionMatrix(df$pred, df$obs, positive = "Progressor")
+      data.frame(
+        Accuracy = cm$overall["Accuracy"],
+        Sensitivity = cm$byClass["Sensitivity"],
+        Specificity = cm$byClass["Specificity"]
+      )
+    })
+    cm_df <- bind_rows(cm_list)
+
+    # 每折 AUC，强制转 numeric
+    auc_list <- preds %>%
+      group_by(Resample) %>%
+      summarise(
+        auc = as.numeric(roc(response = obs, predictor = Progressor,
+                             levels = c("Stable", "Progressor"), direction = "<")$auc),
+        .groups = "drop"
+      )
+
+    auc_mean <- mean(auc_list$auc)
+    auc_sd   <- sd(auc_list$auc)
+
+    # 返回性能指标
+    data.frame(
+      Model = name,
+      AUC = auc_mean,
+      AUC_SD = auc_sd,
+      Accuracy = mean(cm_df$Accuracy),
+      Accuracy_SD = sd(cm_df$Accuracy),
+      Sensitivity = mean(cm_df$Sensitivity),
+      Sensitivity_SD = sd(cm_df$Sensitivity),
+      Specificity = mean(cm_df$Specificity),
+      Specificity_SD = sd(cm_df$Specificity)
+    )
+  })
+}
+
+perf_summary <- bind_rows(
+  suppress_predict(glm_model, "Logistic Regression"),
+  suppress_predict(rf_model,  "Random Forest"),
+  suppress_predict(gbm_model, "GBM"),
+  suppress_predict(xgb_model, "XGBoost")
+)
+
+perf_summary_rounded <- perf_summary %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3)))
+
+# 🧾 输出性能表格
+perf_summary_rounded %>%
+  kable(caption = "5-Fold CV Model Performance Summary", align = 'c') %>%
+  kable_styling(full_width = FALSE)
+
+# --------------------- #
+# 📈 ROC 曲线可视化
+# --------------------- #
+get_roc_df <- function(model, name){
+  preds <- model$pred
+  tune_cols <- intersect(names(preds), names(model$bestTune))
+  if (length(tune_cols) > 0){
+    for (tc in tune_cols){
+      preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+    }
+  }
+  roc_obj <- roc(response = preds$obs, predictor = preds$Progressor,
+                 levels = c("Stable", "Progressor"), direction = "<")
+  data.frame(FPR = 1 - roc_obj$specificities,
+             TPR = roc_obj$sensitivities,
+             Model = name)
+}
+
+roc_df <- bind_rows(
+  get_roc_df(glm_model,  "Logistic Regression"),
+  get_roc_df(rf_model,   "Random Forest"),
+  get_roc_df(gbm_model,  "GBM"),
+  get_roc_df(xgb_model,  "XGBoost")
+)
+
+ggplot(roc_df, aes(x = FPR, y = TPR, color = Model)) +
+  geom_line(size = 1.2) +
+  geom_abline(linetype = "dashed", color = "gray") +
+  theme_minimal() +
+  labs(title = "MCI → AD Progression Prediction ROC Curves",
+       x = "False Positive Rate", y = "True Positive Rate") +
+  theme(legend.position = "bottom")
+
+```
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+
+# --------------------- #
+# 🚀 加载必要的包
+# --------------------- #
+library(dplyr)
+library(caret)
+library(pROC)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+library(devtools)
+
+
+library(ADMerge)
+# library(dplyr)
+library(knitr)
+# library(readxl)
+library(kableExtra)
+
+
+
+
+
+
+
+ADNI_table = get_src_table(path = "ADNI Demonstration",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366))
+
+ADNI_table
+
+plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+
+ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+DATE_type = "Date",
+timeline_file = "ADNI_Cognitive",
+dict_src = ADNI_table)
+# 
+
+complete_ADNI = review_complete(ADNI_merged, check_cols = c(
+  # ---- 基本 ID / 时间 ----
+  "ID_merged",      # 合并后的受试者 ID
+  "Date_timeline",  # 时间线日期
+  "VISCODE",        # 访问代码 (如 bl, m06, m12)
+  "VISCODE2",       # 扩展访问代码
+  
+  # ---- 人口学 / 遗传 ----
+  "PTGENDER",       # 性别
+  "PTEDUCAT",       # 受教育年限
+  "GENOTYPE",       # APOE 基因型
+  
+  # ---- 诊断 ----
+  "DIAGNOSIS",      # 诊断 (CN / MCI / AD)
+  
+  # ---- 认知 / 临床 ----
+  "N1M",            # Word List Learning Immediate Recall (平均分)
+  "MMSCORE",        # Mini-Mental State Exam (MMSE 总分)
+  
+  # ---- MRI 结构体积 ----
+  "ST29SV",         # 左海马体积
+  "ST88SV",         # 右海马体积
+  "ST109TS"         # 脑室体积 (Ventricles total volume/score)
+))
+
+
+#
+data = complete_ADNI$complete_df
+
+data_sorted <- data %>% arrange(ID_merged, Date_timeline)
+
+mci_visits <- data_sorted %>% filter(DIAGNOSIS == 2)
+ad_visits  <- data_sorted %>% filter(DIAGNOSIS == 3)
+
+mci_to_ad_ids <- mci_visits %>%
+  inner_join(ad_visits, by = "ID_merged") %>%
+  filter(Date_timeline.x < Date_timeline.y) %>%
+  distinct(ID_merged) %>%
+  pull(ID_merged)
+
+cat("✅ 找到 MCI → AD 受试者人数:", length(mci_to_ad_ids), "\n")
+
+mci_baseline <- mci_visits %>%
+  group_by(ID_merged) %>%
+  slice(1) %>%
+  ungroup()
+
+mci_labeled <- mci_baseline %>%
+  mutate(label = ifelse(ID_merged %in% mci_to_ad_ids, 1, 0))
+
+set.seed(42)
+positive_df <- mci_labeled %>% filter(label == 1)
+negative_df <- mci_labeled %>% filter(label == 0) %>% sample_n(128)
+model_df <- bind_rows(positive_df, negative_df)
+
+predictor_vars <- c("PTGENDER", "PTEDUCAT", "GENOTYPE",
+                    "N1M", "MMSCORE", "ST29SV", "ST88SV", "ST109TS")
+
+model_data <- model_df %>%
+  select(all_of(predictor_vars), label) %>%
+  na.omit()
+
+model_data$label <- factor(ifelse(model_data$label == 1, "Progressor", "Stable"),
+                           levels = c("Progressor", "Stable"))
+
+# --------------------- #
+# 🔄 CV 设置
+# --------------------- #
+cv_control <- trainControl(
+  method = "cv", number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  savePredictions = "final"
+)
+
+# --------------------- #
+# ⚙️ 模型训练
+# --------------------- #
+set.seed(123)
+glm_model <- train(label ~ ., data = model_data,
+                   method = "glm", family = binomial(),
+                   trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+rf_model <- train(label ~ ., data = model_data,
+                  method = "rf", tuneLength = 5,
+                  trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+gbm_model <- train(label ~ ., data = model_data,
+                   method = "gbm", verbose = FALSE, tuneLength = 5,
+                   trControl = cv_control, metric = "ROC")
+
+set.seed(123)
+xgb_model <- train(label ~ ., data = model_data,
+                   method = "xgbTree", tuneLength = 5,
+                   trControl = cv_control, metric = "ROC")
+
+# ----------------------------- #
+# 📊 提取性能指标（含 AUC_SD）
+# ----------------------------- #
+suppress_predict <- function(model, name){
+  suppressWarnings({
+    preds <- model$pred
+    tune_cols <- intersect(names(preds), names(model$bestTune))
+    
+    # 只保留最佳超参数组合
+    if (length(tune_cols) > 0){
+      for (tc in tune_cols){
+        preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+      }
+    }
+
+    # 每折 confusion matrix
+    cm_list <- lapply(split(preds, preds$Resample), function(df){
+      cm <- confusionMatrix(df$pred, df$obs, positive = "Progressor")
+      data.frame(
+        Accuracy = cm$overall["Accuracy"],
+        Sensitivity = cm$byClass["Sensitivity"],
+        Specificity = cm$byClass["Specificity"]
+      )
+    })
+    cm_df <- bind_rows(cm_list)
+
+    # 每折 AUC，强制转 numeric
+    auc_list <- preds %>%
+      group_by(Resample) %>%
+      summarise(
+        auc = as.numeric(roc(response = obs, predictor = Progressor,
+                             levels = c("Stable", "Progressor"), direction = "<")$auc),
+        .groups = "drop"
+      )
+
+    auc_mean <- mean(auc_list$auc)
+    auc_sd   <- sd(auc_list$auc)
+
+    # 返回性能指标
+    data.frame(
+      Model = name,
+      AUC = auc_mean,
+      AUC_SD = auc_sd,
+      Accuracy = mean(cm_df$Accuracy),
+      Accuracy_SD = sd(cm_df$Accuracy),
+      Sensitivity = mean(cm_df$Sensitivity),
+      Sensitivity_SD = sd(cm_df$Sensitivity),
+      Specificity = mean(cm_df$Specificity),
+      Specificity_SD = sd(cm_df$Specificity)
+    )
+  })
+}
+
+perf_summary <- bind_rows(
+  suppress_predict(glm_model, "Logistic Regression"),
+  suppress_predict(rf_model,  "Random Forest"),
+  suppress_predict(gbm_model, "GBM"),
+  suppress_predict(xgb_model, "XGBoost")
+)
+
+perf_summary_rounded <- perf_summary %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3)))
+
+# 🧾 输出性能表格
+perf_summary_rounded %>%
+  kable(caption = "5-Fold CV Model Performance Summary", align = 'c') %>%
+  kable_styling(full_width = FALSE)
+
+# --------------------- #
+# 📈 ROC 曲线可视化
+# --------------------- #
+get_roc_df <- function(model, name){
+  preds <- model$pred
+  tune_cols <- intersect(names(preds), names(model$bestTune))
+  if (length(tune_cols) > 0){
+    for (tc in tune_cols){
+      preds <- preds[preds[[tc]] == model$bestTune[[tc]], ]
+    }
+  }
+  roc_obj <- roc(response = preds$obs, predictor = preds$Progressor,
+                 levels = c("Stable", "Progressor"), direction = "<")
+  data.frame(FPR = 1 - roc_obj$specificities,
+             TPR = roc_obj$sensitivities,
+             Model = name)
+}
+
+roc_df <- bind_rows(
+  get_roc_df(glm_model,  "Logistic Regression"),
+  get_roc_df(rf_model,   "Random Forest"),
+  get_roc_df(gbm_model,  "GBM"),
+  get_roc_df(xgb_model,  "XGBoost")
+)
+
+ggplot(roc_df, aes(x = FPR, y = TPR, color = Model)) +
+  geom_line(size = 1.2) +
+  geom_abline(linetype = "dashed", color = "gray") +
+  theme_minimal() +
+  labs(title = "MCI → AD Progression Prediction ROC Curves",
+       x = "False Positive Rate", y = "True Positive Rate") +
+  theme(legend.position = "bottom")
+
+```
+
+
+# BIOCARD example
+
+```{r}
+library(ADMerge)
+library(dplyr)
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+BIOCARD_table
+
+
+plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_CognitiveData·",dict_src = BIOCARD_table)
+
+
+missing_pct <- sapply(Biocard_merged$analysis_data, function(x) mean(is.na(x)) * 100)
+missing_df <- data.frame(Variable = names(missing_pct), Missing_Percent = missing_pct)
+missing_df <- missing_df[order(-missing_df$Missing_Percent), ]
+
+missing_df =missing_df %>% filter(Missing_Percent <= 15) %>% distinct(Variable)
+
+missing_df$Variable
+
+
+Biocard_merged$analysis_data
+
+complete_BIOCARD <- review_complete(
+  Biocard_merged, 
+  check_cols = c(
+    # -- 基本信息 --
+    "ID_merged",
+    "Date_timeline",
+    "VISITNO",
+    
+    # -- 诊断变量 --
+    "DIAGNOSIS",
+    
+    # -- 人口统计变量 --
+    "SEX", "EDUC", "HANDED", "RACE",
+    
+    # -- 认知变量 --
+    "C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A"
+  )
+)
+
+
+nocnid = complete_BIOCARD$complete_df %>% filter(DIAGNOSIS != "NORMAL") %>% distinct(ID_merged)
+
+
+first_nonCN <- complete_BIOCARD$complete_df %>%
+  filter(ID_merged %in% nocnid$ID_merged, DIAGNOSIS != "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline) %>%
+  select(ID_merged, first_nonCN_date = Date_timeline)
+
+
+cn_before_nonCN <- complete_BIOCARD$complete_df %>%
+  filter(ID_merged %in% first_nonCN$ID_merged, DIAGNOSIS == "NORMAL") %>%
+  inner_join(first_nonCN, by = "ID_merged") %>%
+  filter(Date_timeline < first_nonCN_date) %>%
+  distinct(ID_merged)
+
+
+
+# 有 baseline CN 记录的人数
+n_with_CN_baseline <- nrow(cn_before_nonCN)
+
+# 所有有非CN记录的人数
+n_total <- nrow(first_nonCN)
+
+# 百分比
+cat("在", n_total, "个非CN患者中，有", n_with_CN_baseline, "个（", 
+    round(n_with_CN_baseline / n_total * 100, 2), "%）曾有 CN 记录\n")
+
+
+baseline_df <- complete_BIOCARD$complete_df %>%
+  filter(DIAGNOSIS == "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline) %>%
+  ungroup()
+
+
+conversion_df <- complete_BIOCARD$complete_df %>%
+  filter(DIAGNOSIS != "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline) %>%
+  ungroup() %>%
+  select(ID_merged, event_time = Date_timeline)
+
+
+surv_data <- baseline_df %>%
+  select(ID_merged, baseline_time = Date_timeline, SEX, EDUC, HANDED, RACE,
+         C1201D, C1204A, C1205A, BNTPCT, C1210A, C1208A) %>%
+  left_join(conversion_df, by = "ID_merged") %>%
+  mutate(
+    # 生存时间（单位：年）
+    time = as.numeric(difftime(event_time, baseline_time, units = "days")),
+    
+    # 如果 NA 说明没转变，设为 censored
+    event = ifelse(is.na(event_time), 0, 1)
+  )
+
+
+BIOCARD_table$VARS_in_file[2]
+
+```
+
+```{r}
+library(dplyr)
+library(survival)
+library(survminer)
+library(gtsummary)
+
+# Step 1: 原始数据
+df <- complete_BIOCARD$complete_df
+
+# Step 2: 获取 baseline CN（NORMAL）记录（最早一次 CN 诊断）
+baseline_df <- df %>%
+  filter(DIAGNOSIS == "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, baseline_time = Date_timeline,
+         SEX, EDUC, HANDED, RACE,
+         C1201D, C1204A, C1205A, BNTPCT, C1210A, C1208A)
+
+
+
+
+# Step 3: 获取首次非 CN (MCI/AD) 时间（事件时间）
+conversion_df <- df %>%
+  filter(DIAGNOSIS != "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, event_time = Date_timeline)
+
+
+
+# Step 4: 获取所有人的最后一次随访时间（用于 censoring）
+last_followup_df <- df %>%
+  group_by(ID_merged) %>%
+  slice_max(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, last_time = Date_timeline)
+
+
+# Step 5: 合并所有关键时间点
+surv_data <- baseline_df %>%
+  # 保证我们只使用有 baseline CN 的人
+  left_join(conversion_df, by = "ID_merged") %>%
+  left_join(last_followup_df, by = "ID_merged") %>%
+  mutate(
+    # event indicator
+    event = ifelse(is.na(event_time), 0, 1),
+    
+    # 如果有转换事件，final_time 就是 event_time；否则就是最后随访时间
+    final_time = ifelse(event == 1, event_time, last_time),
+    final_time = as.Date(final_time, origin = "1970-01-01"),  # 防止类型错误
+    
+    # 计算生存时间（单位：年）
+    time = as.numeric(difftime(final_time, baseline_time, units = "days")) / 365.25
+  ) %>%
+  # 去除不合理时间（负时间或极短随访时间）
+  filter(time >= 0.1)
+
+
+
+cox_model <- coxph(Surv(time, event) ~ 
+                     C1201D + C1204A + C1205A + BNTPCT + C1210A + C1208A +
+                     SEX + EDUC + HANDED + RACE,
+                   data = surv_data)
+
+
+cox_model %>% tbl_regression(exponentiate = TRUE)
+
+
+
+library(survminer)
+library(survival)
+library(dplyr)
+
+# 1. 创建三个分组变量（中位数切分）
+surv_data <- surv_data %>%
+  mutate(
+    BNTPCT_group  = ifelse(BNTPCT >= median(BNTPCT, na.rm = TRUE), "High", "Low"),
+    C1210A_group  = ifelse(C1210A >= median(C1210A, na.rm = TRUE), "High", "Low"),
+    C1208A_group  = ifelse(C1208A >= median(C1208A, na.rm = TRUE), "High", "Low")
+  )
+
+
+fit_bnt <- survfit(Surv(time, event) ~ BNTPCT_group, data = surv_data)
+
+ggsurvplot(fit_bnt, data = surv_data,
+           conf.int = TRUE,
+           risk.table = TRUE,
+           pval = TRUE,
+           title = "Survival from CN by BNTPCT score",
+           legend.title = "BNTPCT Group",
+           xlab = "Years since CN baseline",
+           ylab = "Proportion Remaining CN")
+
+
+fit_c1210 <- survfit(Surv(time, event) ~ C1210A_group, data = surv_data)
+
+ggsurvplot(fit_c1210, data = surv_data,
+           conf.int = TRUE,
+           risk.table = TRUE,
+           pval = TRUE,
+           title = "Survival from CN by C1210A score",
+           legend.title = "C1210A Group",
+           xlab = "Years since CN baseline",
+           ylab = "Proportion Remaining CN")
+
+
+fit_c1208 <- survfit(Surv(time, event) ~ C1208A_group, data = surv_data)
+
+ggsurvplot(fit_c1208, data = surv_data,
+           conf.int = TRUE,
+           risk.table = TRUE,
+           pval = TRUE,
+           title = "Survival from CN by C1208A score",
+           legend.title = "C1208A Group",
+           xlab = "Years since CN baseline",
+           ylab = "Proportion Remaining CN")
+
+
+```
+
+
+```{r}
+library(survival)
+library(gtsummary)
+library(ggplot2)
+library(dplyr)
+library(broom)
+
+# 所有认知变量
+cog_vars <- c("C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A")
+adj_vars <- "SEX + EDUC + HANDED + RACE"
+
+# 存储模型
+model_list <- list()
+
+# 构建模型
+for (var in cog_vars) {
+  f <- as.formula(paste0("Surv(time, event) ~ ", var, " + ", adj_vars))
+  model_list[[var]] <- coxph(f, data = surv_data)
+}
+
+
+library(gtsummary)
+
+# 每个模型转为 gtsummary 表格
+tbl_list <- lapply(model_list, function(m) tbl_regression(m, exponentiate = TRUE))
+
+# 拼接展示
+tbl_models <- tbl_stack(tbl_list) %>%
+  modify_spanning_header(everything() ~ "**Cox Models: Each Cognitive Score Adjusted for Demographics**") %>%
+  bold_labels()
+
+tbl_models
+
+
+# 对每个模型画森林图
+library(survminer)
+
+for (var in cog_vars) {
+  cat("==== Forest plot for", var, "====\n")
+  print(ggforest(model_list[[var]], data = surv_data, main = paste("Forest Plot:", var)))
+}
+
+
+# 整理 broom 风格 summary
+hr_df <- lapply(names(model_list), function(var) {
+  tidy(model_list[[var]], exponentiate = TRUE) %>%
+    filter(term == var) %>%
+    mutate(variable = var)
+}) %>% bind_rows()
+
+# 清理变量名
+hr_df <- hr_df %>%
+  mutate(label = variable,
+         sig = ifelse(p.value < 0.05, "Significant", "NS"))
+
+# 绘图
+ggplot(hr_df, aes(x = reorder(label, estimate), y = estimate, ymin = conf.low, ymax = conf.high, color = sig)) +
+  geom_pointrange(size = 0.9) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey40") +
+  coord_flip() +
+  labs(title = "Hazard Ratios (HR) for Individual Cognitive Variables",
+       x = "Cognitive Variable",
+       y = "Hazard Ratio (HR)") +
+  theme_minimal() +
+  scale_color_manual(values = c("Significant" = "firebrick", "NS" = "gray40"))
+
+
+```
+
+
+
+```{r}
+# ==== 0. 加载必要包 ====
+
+library(dplyr)
+library(survival)
+library(survminer)
+library(gtsummary)
+library(broom)
+library(ggplot2)
+
+
+library(ADMerge)
+library(dplyr)
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+BIOCARD_table
+
+
+plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_CognitiveData",dict_src = BIOCARD_table)
+
+
+Biocard_merged$analysis_data %>% distinct(ID_merged)
+
+
+missing_pct <- sapply(Biocard_merged$analysis_data, function(x) mean(is.na(x)) * 100)
+missing_df <- data.frame(Variable = names(missing_pct), Missing_Percent = missing_pct)
+missing_df <- missing_df[order(-missing_df$Missing_Percent), ]
+
+missing_df =missing_df %>% filter(Missing_Percent <= 15) %>% distinct(Variable)
+
+missing_df$Variable
+
+
+Biocard_merged$analysis_data
+
+complete_BIOCARD <- review_complete(
+  Biocard_merged, 
+  check_cols = c(
+    # -- 基本信息 --
+    "ID_merged",
+    "Date_timeline",
+    "VISITNO",
+    
+    # -- 诊断变量 --
+    "DIAGNOSIS",
+    
+    # -- 人口统计变量 --
+    "SEX", "EDUC", "HANDED", "RACE",
+    
+    # -- 认知变量 --
+    "C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A"
+  )
+)
+
+
+# ==== 1. 构建干净的 surv_data ====
+df <- complete_BIOCARD$complete_df
+
+# 1.1 baseline CN
+baseline_df <- df %>%
+  filter(DIAGNOSIS == "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, baseline_time = Date_timeline,
+         SEX, EDUC, HANDED, RACE,
+         C1201D, C1204A, C1205A, BNTPCT, C1210A, C1208A)
+
+# 1.2 conversion time
+conversion_df <- df %>%
+  filter(DIAGNOSIS != "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, event_time = Date_timeline)
+
+# 1.3 last follow-up
+last_followup_df <- df %>%
+  group_by(ID_merged) %>%
+  slice_max(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, last_time = Date_timeline)
+
+# 1.4 合并 + 计算 time/event
+surv_data <- baseline_df %>%
+  left_join(conversion_df, by = "ID_merged") %>%
+  left_join(last_followup_df, by = "ID_merged") %>%
+  mutate(
+    event = ifelse(is.na(event_time), 0, 1),
+    final_time = ifelse(event == 1, event_time, last_time),
+    final_time = as.Date(final_time, origin = "1970-01-01"),
+    time = as.numeric(difftime(final_time, baseline_time, units = "days")) / 365.25
+  ) %>%
+  filter(time >= 0.1)
+
+# ==== 2. 联合 Cox 模型 ====
+cox_joint_model <- coxph(Surv(time, event) ~ 
+                           C1201D + C1204A + C1205A + BNTPCT + C1210A + C1208A +
+                           SEX + EDUC + HANDED + RACE,
+                         data = surv_data)
+
+tbl_joint <- tbl_regression(cox_joint_model, exponentiate = TRUE)
+
+# ==== 3. 每个认知指标的单独模型（输出各自表格） ====
+cog_vars <- c("C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A")
+adj_vars <- "SEX + EDUC + HANDED + RACE"
+
+model_list <- list()
+table_list <- list()
+
+for (var in cog_vars) {
+  f <- as.formula(paste0("Surv(time, event) ~ ", var, " + ", adj_vars))
+  model <- coxph(f, data = surv_data)
+  model_list[[var]] <- model
+  table_list[[var]] <- tbl_regression(model, exponentiate = TRUE) %>%
+    modify_header(label ~ paste("**", var, "**"))
+}
+
+# ==== 4. HR 绘图（联合 vs 单独） ====
+joint_df <- tidy(cox_joint_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term %in% cog_vars) %>%
+  mutate(variable = term, model = "Joint")
+
+single_df <- lapply(names(model_list), function(var) {
+  tidy(model_list[[var]], exponentiate = TRUE, conf.int = TRUE) %>%
+    filter(term == var) %>%
+    mutate(variable = var, model = "Single")
+}) %>% bind_rows()
+
+plot_df <- bind_rows(joint_df, single_df) %>%
+  mutate(sig = ifelse(p.value < 0.05, "Significant", "NS"))
+
+p <- ggplot(plot_df, aes(x = variable, y = estimate,
+                         ymin = conf.low, ymax = conf.high,
+                         color = model, shape = sig)) +
+  geom_pointrange(position = position_dodge(width = 0.5), size = 1) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey50") +
+  coord_flip() +
+  labs(title = "Hazard Ratios: Joint vs Single Models",
+       x = "Cognitive Variable", y = "Hazard Ratio (HR)",
+       color = "Model", shape = "Significance") +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values = c("Joint" = "#0072B2", "Single" = "#D55E00")) +
+  scale_shape_manual(values = c("Significant" = 16, "NS" = 1))
+
+# ==== 5. 分组 KM 曲线 ====
+surv_data <- surv_data %>%
+  mutate(
+    BNTPCT_group  = ifelse(BNTPCT >= median(BNTPCT, na.rm = TRUE), "High", "Low"),
+    C1210A_group  = ifelse(C1210A >= median(C1210A, na.rm = TRUE), "High", "Low"),
+    C1208A_group  = ifelse(C1208A >= median(C1208A, na.rm = TRUE), "High", "Low"),
+    C1204A_group  = ifelse(C1204A >= median(C1204A, na.rm = TRUE), "High", "Low")  # 新增
+  )
+
+# BNTPCT
+fit_bnt <- survfit(Surv(time, event) ~ BNTPCT_group, data = surv_data)
+plot_bnt <- ggsurvplot(fit_bnt, data = surv_data,
+                       conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                       title = "Survival from CN by BNTPCT score",
+                       legend.title = "BNTPCT Group",
+                       xlab = "Years since CN baseline",
+                       ylab = "Proportion Remaining CN")
+
+# C1210A
+fit_c1210 <- survfit(Surv(time, event) ~ C1210A_group, data = surv_data)
+plot_c1210 <- ggsurvplot(fit_c1210, data = surv_data,
+                         conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                         title = "Survival from CN by C1210A score",
+                         legend.title = "C1210A Group",
+                         xlab = "Years since CN baseline",
+                         ylab = "Proportion Remaining CN")
+
+# C1208A
+fit_c1208 <- survfit(Surv(time, event) ~ C1208A_group, data = surv_data)
+plot_c1208 <- ggsurvplot(fit_c1208, data = surv_data,
+                         conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                         title = "Survival from CN by C1208A score",
+                         legend.title = "C1208A Group",
+                         xlab = "Years since CN baseline",
+                         ylab = "Proportion Remaining CN")
+
+#  C1204A
+fit_c1204 <- survfit(Surv(time, event) ~ C1204A_group, data = surv_data)
+plot_c1204 <- ggsurvplot(fit_c1204, data = surv_data,
+                         conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                         title = "Survival from CN by C1204A score",
+                         legend.title = "C1204A Group",
+                         xlab = "Years since CN baseline",
+                         ylab = "Proportion Remaining CN")
+
+# ==== 6. 输出内容 ====
+tbl_joint          
+table_list         
+p                 
+plot_bnt          
+plot_c1210        
+plot_c1208         
+plot_c1204
+
+```
+
+```{r}
+# ==== 0. 加载必要包 ====
+library(dplyr)
+library(survival)
+library(survminer)
+library(gtsummary)
+library(broom)
+library(ggplot2)
+
+# ==== 1. 构建干净的 surv_data ====
+df <- complete_BIOCARD$complete_df
+
+# 1.1 baseline CN
+baseline_df <- df %>%
+  filter(DIAGNOSIS == "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, baseline_time = Date_timeline,
+         SEX, EDUC, HANDED, RACE,
+         C1201D, C1204A, C1205A, BNTPCT, C1210A, C1208A)
+
+# 1.2 conversion time
+conversion_df <- df %>%
+  filter(DIAGNOSIS != "NORMAL") %>%
+  group_by(ID_merged) %>%
+  slice_min(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, event_time = Date_timeline)
+
+# 1.3 last follow-up
+last_followup_df <- df %>%
+  group_by(ID_merged) %>%
+  slice_max(Date_timeline, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(ID_merged, last_time = Date_timeline)
+
+# 1.4 合并 + 计算 time/event
+surv_data <- baseline_df %>%
+  left_join(conversion_df, by = "ID_merged") %>%
+  left_join(last_followup_df, by = "ID_merged") %>%
+  mutate(
+    event = ifelse(is.na(event_time), 0, 1),
+    final_time = ifelse(event == 1, event_time, last_time),
+    final_time = as.Date(final_time, origin = "1970-01-01"),
+    time = as.numeric(difftime(final_time, baseline_time, units = "days")) / 365.25
+  ) %>%
+  filter(time >= 0.1)
+
+# ==== 2. 联合 Cox 模型（去掉 C1210A）====
+cox_joint_model_no_c1210 <- coxph(Surv(time, event) ~ 
+                           C1201D + C1204A + C1205A + BNTPCT + C1208A +
+                           SEX + EDUC + HANDED + RACE,
+                         data = surv_data)
+
+tbl_joint_no_c1210 <- tbl_regression(cox_joint_model_no_c1210, exponentiate = TRUE)
+
+# ==== 3. 每个认知指标的单独模型（输出各自表格）====
+cog_vars <- c("C1201D", "C1204A", "C1205A", "BNTPCT", "C1210A", "C1208A")
+adj_vars <- "SEX + EDUC + HANDED + RACE"
+
+model_list <- list()
+table_list <- list()
+
+for (var in cog_vars) {
+  f <- as.formula(paste0("Surv(time, event) ~ ", var, " + ", adj_vars))
+  model <- coxph(f, data = surv_data)
+  model_list[[var]] <- model
+  table_list[[var]] <- tbl_regression(model, exponentiate = TRUE) %>%
+    modify_header(label ~ paste("**", var, "**"))
+}
+
+# ==== 4. HR 绘图（联合 vs 单独）====
+joint_df <- tidy(cox_joint_model_no_c1210, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term %in% c("C1201D", "C1204A", "C1205A", "BNTPCT", "C1208A")) %>%
+  mutate(variable = term, model = "Joint")
+
+single_df <- lapply(names(model_list), function(var) {
+  tidy(model_list[[var]], exponentiate = TRUE, conf.int = TRUE) %>%
+    filter(term == var) %>%
+    mutate(variable = var, model = "Single")
+}) %>% bind_rows()
+
+plot_df <- bind_rows(joint_df, single_df) %>%
+  mutate(sig = ifelse(p.value < 0.05, "Significant", "NS"))
+
+p <- ggplot(plot_df, aes(x = variable, y = estimate,
+                         ymin = conf.low, ymax = conf.high,
+                         color = model, shape = sig)) +
+  geom_pointrange(position = position_dodge(width = 0.5), size = 1) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey50") +
+  coord_flip() +
+  labs(title = "Hazard Ratios: Joint vs Single Models",
+       x = "Cognitive Variable", y = "Hazard Ratio (HR)",
+       color = "Model", shape = "Significance") +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values = c("Joint" = "#0072B2", "Single" = "#D55E00")) +
+  scale_shape_manual(values = c("Significant" = 16, "NS" = 1))
+
+# ==== 5. 分组 KM 曲线（High vs Low）====
+surv_data <- surv_data %>%
+  mutate(
+    BNTPCT_group  = ifelse(BNTPCT >= median(BNTPCT, na.rm = TRUE), "High", "Low"),
+    C1210A_group  = ifelse(C1210A >= median(C1210A, na.rm = TRUE), "High", "Low"),
+    C1208A_group  = ifelse(C1208A >= median(C1208A, na.rm = TRUE), "High", "Low")
+  )
+
+# BNTPCT
+fit_bnt <- survfit(Surv(time, event) ~ BNTPCT_group, data = surv_data)
+plot_bnt <- ggsurvplot(fit_bnt, data = surv_data,
+                       conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                       title = "Survival from CN by BNTPCT score",
+                       legend.title = "BNTPCT Group",
+                       xlab = "Years since CN baseline",
+                       ylab = "Proportion Remaining CN")
+
+# C1210A
+fit_c1210 <- survfit(Surv(time, event) ~ C1210A_group, data = surv_data)
+plot_c1210 <- ggsurvplot(fit_c1210, data = surv_data,
+                         conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                         title = "Survival from CN by C1210A score",
+                         legend.title = "C1210A Group",
+                         xlab = "Years since CN baseline",
+                         ylab = "Proportion Remaining CN")
+
+# C1208A
+fit_c1208 <- survfit(Surv(time, event) ~ C1208A_group, data = surv_data)
+plot_c1208 <- ggsurvplot(fit_c1208, data = surv_data,
+                         conf.int = TRUE, risk.table = TRUE, pval = TRUE,
+                         title = "Survival from CN by C1208A score",
+                         legend.title = "C1208A Group",
+                         xlab = "Years since CN baseline",
+                         ylab = "Proportion Remaining CN")
+
+# ==== 6. 输出对象 ====
+tbl_joint_no_c1210    # 联合模型（去掉 C1210A）
+table_list            # 每个认知变量的单独建模表格（如 table_list[["C1210A"]]）
+p                     # HR 对比图：联合 vs 单独
+plot_bnt              # BNTPCT 生存曲线
+plot_c1210            # C1210A 生存曲线
+plot_c1208            # C1208A 生存曲线
+
+```
+```{r}
+library(haven)
+
+# Read SAS data file
+df <- read_sas("/Users/shijia.zhang/Library/Containers/com.tencent.xinWeChat/Data/Library/Application Support/com.tencent.xinWeChat/2.0b4.0.9/69223e04f862f02efac7a84a39fddaf9/Message/MessageTemp/0a3fd9c8f3ef87cbe90f7054f19370f0/File/第一部分样例数据/d13_sample.sas7bdat")
+
+df
+
+```
+
+
+```
+
+
+
+
+
+
+
 # BIOCARD example
 
 ```{r}

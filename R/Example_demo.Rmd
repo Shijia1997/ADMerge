@@ -1,0 +1,502 @@
+---
+title: "Untitled"
+author: "Shijia Zhang"
+date: "2025-08-31"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(caret)
+library(pROC)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+library(devtools)
+install_github("Shijia1997/ADMerge",force = TRUE)
+
+library(ADMerge)
+# library(dplyr)
+library(knitr)
+# library(readxl)
+library(kableExtra)
+```
+
+```{r}
+
+library(ADMerge)
+library(dplyr)
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_CognitiveData",dict_src = BIOCARD_table)
+
+
+
+
+complete_BIOCARD <- review_complete(
+  Biocard_merged,
+  check_cols = c(
+    # -- 基本信息/对齐 --
+    "ID_merged",        # 主键（你合并后的一致 ID）
+    "Date_timeline",    # 访视日期（或基线日期）
+    "VISITNO",          # 访视编号
+
+    # -- 诊断/结局（用于筛 CN 基线 & 推导事件） --
+    "DIAGNOSIS",        # 每次访视的临床综合诊断（用来筛 baseline=CN）
+    # 若你已有结局衍生列，也可一并检查（没有就删掉下面两行）：
+
+    # -- 人口统计/遗传 --
+    "SEX",
+    "EDUC",
+    "BIRTHYEAR",
+    "APOECODE",         # APOE（建议后续衍生 APOE4=1/0）
+
+    # -- 认知（基线） --
+    "C1208A",           # DSST（Digit Symbol；论文用之一）
+    "C1A109",           # VPA-Immediate（WMS Paired Associates I）
+
+    # -- MRI（基线） --
+    "HIPRIGHTV",        # 右海马 ICV 标化体积
+    "ECRIGHTT",         # 右内嗅皮层厚度
+
+    # -- CSF（基线） --
+    "ptau181",
+    "AB42" # p-tau181（Efficient 模型里保留 p-tau）
+    # 如果你CSF列名不同(如 PTAU/PTAU_PGML)，把实际列名放这里
+  )
+)
+
+
+complete_BIOCARD$complete_df %>% filter(DIAGNOSIS == "NORMAL") %>% distinct(ID_merged)
+
+
+
+unique(complete_BIOCARD$complete_df$DIAGNOSIS)
+
+
+
+#EDUC #BIRTHYEAR (for age) #C1208A (DSST) #C1A109 (VPA) #APOECODE  #HIPRIGHTV(hippo_right) #ECRIGHTT(entorhinal_R_thick) #AB42 #ptau181
+```
+
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(survival)
+library(timeROC)
+library(gtsummary)
+```
+
+
+```{r}
+df <- complete_BIOCARD$complete_df
+
+pred_vars <- df %>%
+  mutate(
+    DSST    = .data$C1208A,       # Digit Symbol
+    VPA_IM  = .data$C1A109,       # Paired Associates I
+    PTAU    = .data$ptau181,      # CSF p-tau181
+    HIPPO_R = .data$HIPRIGHTV,    # 右海马（ICV 标化）
+    ERC_R   = .data$ECRIGHTT,     # 右内嗅皮层厚度
+    AGE     = lubridate::year(.data$Date_timeline) - .data$BIRTHYEAR,
+    AB42 = .data$AB42,
+
+    # —— 关键修改：APOE4 兼容 “3.4 / 34 / E3/E4 / 3-4” 等格式 ——
+    APOE4 = case_when(
+      is.na(.data$APOECODE) ~ NA_integer_,
+      TRUE ~ as.integer(grepl("4",
+                gsub("[^0-9]", "", as.character(.data$APOECODE))
+              ))
+    )
+  )
+
+
+
+baseline <- pred_vars %>%
+  filter(.data$DIAGNOSIS == "NORMAL") %>%
+  arrange(.data$ID_merged, .data$Date_timeline) %>%
+  group_by(.data$ID_merged) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  transmute(
+    ID_merged,
+    baseline_date = .data$Date_timeline,
+    AGE, EDUC = .data$EDUC, APOE4,AB42,
+    DSST, VPA_IM, HIPPO_R, ERC_R, PTAU
+  )
+
+
+## 2) 用“全时间线”生成事件/删失（用 analysis_data，不限于 complete_df）
+diag_long <- Biocard_merged$analysis_data %>%     # 确保有 ID/日期/诊断三列
+  select(ID_merged, Date_timeline, DIAGNOSIS)
+
+
+outcome <- diag_long %>%
+  inner_join(baseline %>% select(ID_merged, baseline_date), by = "ID_merged") %>%
+  filter(.data$Date_timeline >= .data$baseline_date) %>%
+  mutate(is_event = .data$DIAGNOSIS %in% c("MCI", "DEMENTIA")) %>%
+  group_by(.data$ID_merged) %>%
+  summarise(
+    baseline_date = first(.data$baseline_date),
+    event_date = if (any(is_event, na.rm = TRUE)) min(.data$Date_timeline[is_event], na.rm = TRUE) else as.Date(NA),
+    last_date  = max(.data$Date_timeline, na.rm = TRUE),
+    status = as.integer(!is.na(event_date)),  # 1=事件, 0=删失
+    T_event = ifelse(status == 1,
+                     as.numeric(difftime(event_date, baseline_date, units = "days"))/365.25,
+                     as.numeric(difftime(last_date,  baseline_date, units = "days"))/365.25),
+    .groups = "drop"
+  )
+
+
+anal <- baseline %>%
+  inner_join(outcome, by = c("ID_merged", "baseline_date")) %>%
+  filter(T_event > 0)
+
+
+# 连续变量列表
+num_cols <- c("AGE","EDUC","DSST","VPA_IM","HIPPO_R","ERC_R","PTAU","AB42")
+
+# 备份标准化参数（可复现）
+sc_mu <- sapply(anal[num_cols], function(x) mean(x, na.rm = TRUE))
+sc_sd <- sapply(anal[num_cols], function(x) sd(x,   na.rm = TRUE))
+
+
+anal[num_cols] <- lapply(num_cols, function(v) as.numeric(scale(anal[[v]])))
+
+library(survival)
+
+fit_eff <- coxph(Surv(T_event, status) ~ AGE + EDUC + APOE4 +
+                   DSST + VPA_IM + HIPPO_R + ERC_R + PTAU + AB42,
+                 data = anal)
+
+fit_eff %>% tbl_regression(exponentiate = TRUE)
+```
+```{r}
+library(survivalROC)
+lp <- predict(fit_eff, type = "lp")  # 线性预测分数
+for (tt in c(5, 7, 10)) {
+  r <- survivalROC(Stime = anal$T_event, status = anal$status,
+                   marker = lp, predict.time = tt,
+                   method = "NNE", span = 0.25)
+  cat(tt, "years AUC =", round(r$AUC, 3), "\n")
+}
+
+```
+```{r}
+# 选模型：含 AB42 的 Full（fit_eff）或不含 AB42 的 Efficient（fit_eff2）
+fit <- fit_eff        # <- 如需改用 Efficient：fit <- fit_eff2
+
+library(survivalROC)
+library(ggplot2)
+# 线性预测分数 = Cox 风险分值（marker）
+lp <- predict(fit, type = "lp")
+
+# 计算 5/7/10 年 ROC
+times <- c(5, 7, 10)
+roclist <- lapply(times, function(tt)
+  survivalROC(
+    Stime        = anal$T_event,
+    status       = anal$status,
+    marker       = lp,
+    predict.time = tt,
+    method       = "NNE",
+    span         = 0.25
+  )
+)
+
+# 拼成绘图数据框（带上 AUC 到图例）
+rocdf <- do.call(rbind, lapply(seq_along(times), function(i) {
+  data.frame(
+    fpr  = roclist[[i]]$FP,              # 1 - specificity
+    tpr  = roclist[[i]]$TP,              # sensitivity
+    time = sprintf("%dy (AUC=%.3f)", times[i], roclist[[i]]$AUC)
+  )
+}))
+rocdf <- rocdf[complete.cases(rocdf), ]
+
+# 画图
+ggplot(rocdf, aes(x = fpr, y = tpr, color = time)) +
+  geom_line(size = 1.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  coord_equal() +
+  labs(
+    title = "Time-dependent ROC (Cox risk score)",
+    x = "1 - Specificity (FPR)", y = "Sensitivity (TPR)"
+  ) +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+# 同时在控制台打印各时点 AUC
+for (i in seq_along(times)) {
+  cat(times[i], "years AUC =", round(roclist[[i]]$AUC, 3), "\n")
+}
+
+```
+```{r}
+# BIOCARD example point 2
+
+library(dplyr)
+library(lubridate)
+library(survival)
+
+BIOCARD_table =get_src_table(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",
+              ID_usr_list = c("SUBJECT_ID"),
+              DATE_usr_list = c("VISITDATE","DIAGDATE","date","MRIDATE"),
+              IS_overlap_list = c("FALSE"),
+              WINDOW_list = c(366))
+
+
+Biocard_merged = ad_merge(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal",DATE_type = "Date",timeline_file = "BIOCARD_CognitiveData",dict_src = BIOCARD_table)
+
+
+
+
+complete_BIOCARD <- review_complete(
+  Biocard_merged,
+  check_cols = c(
+    # -- 基本信息/对齐 --
+    "ID_merged",        # 主键（你合并后的一致 ID）
+    "Date_timeline",    # 访视日期（或基线日期）
+    "VISITNO",          # 访视编号
+
+    # -- 诊断/结局（用于筛 CN 基线 & 推导事件） --
+    "DIAGNOSIS",        # 每次访视的临床综合诊断（用来筛 baseline=CN）
+    # 若你已有结局衍生列，也可一并检查（没有就删掉下面两行）：
+
+    # -- 人口统计/遗传 --
+    "SEX",
+    "EDUC",
+    "BIRTHYEAR",
+    "APOECODE",         # APOE（建议后续衍生 APOE4=1/0）
+
+    # -- 认知（基线） --
+    "C1208A",           # DSST（Digit Symbol；论文用之一）
+    "C1A109",           # VPA-Immediate（WMS Paired Associates I）
+
+    # -- MRI（基线） --
+    "HIPRIGHTV",        # 右海马 ICV 标化体积
+    "ECRIGHTT",         # 右内嗅皮层厚度
+
+    # -- CSF（基线） --
+    "ptau181",
+    "AB42" # p-tau181（Efficient 模型里保留 p-tau）
+    # 如果你CSF列名不同(如 PTAU/PTAU_PGML)，把实际列名放这里
+  )
+)
+
+
+df <- complete_BIOCARD$complete_df
+
+df1 <- df %>%
+  mutate(
+    eTIV = coalesce(EstimatedTotalIntraCranialVol, INTRACVOL),
+    WMH_icv = WM_hypointensities / eTIV,
+    WMH_log = log1p(WMH_icv),
+    AGE = year(Date_timeline) - BIRTHYEAR
+  ) %>%
+  filter(is.na(Missingness) | Missingness == 0)
+
+
+# 2) 选“基线”：最早一次 DIAGNOSIS==NORMAL，且 WMH 与 CSF 三项都有（ADMerge 已做 ±366d 窗口）
+baseline <- df1 %>%
+  filter(DIAGNOSIS == "NORMAL",
+         !is.na(WMH_log), !is.na(ttau), !is.na(ptau181), !is.na(AB42)) %>%
+  arrange(ID_merged, Date_timeline) %>%
+  group_by(ID_merged) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  transmute(
+    ID_merged, baseline_date = Date_timeline,
+    SEX, EDUC, AGE,
+    WMH_log, ttau, ptau181, AB42
+  )
+
+
+diag_long <- Biocard_merged$analysis_data %>%
+  select(ID_merged, Date_timeline, DIAGNOSIS)
+
+
+outcome <- diag_long %>%
+  inner_join(baseline %>% select(ID_merged, baseline_date), by = "ID_merged") %>%
+  filter(Date_timeline >= baseline_date) %>%
+  mutate(is_event = DIAGNOSIS %in% c("MCI","DEMENTIA")) %>%
+  group_by(ID_merged) %>%
+  summarise(
+    baseline_date = first(baseline_date),
+    event_date = if (any(is_event, na.rm=TRUE))
+      min(Date_timeline[is_event], na.rm=TRUE) else as.Date(NA),
+    last_date = max(Date_timeline, na.rm=TRUE),
+    status = as.integer(!is.na(event_date)),
+    T_event = ifelse(status==1,
+      as.numeric(difftime(event_date, baseline_date, units="days"))/365.25,
+      as.numeric(difftime(last_date,  baseline_date, units="days"))/365.25),
+    .groups="drop"
+  )
+
+
+anal <- baseline %>%
+  inner_join(outcome, by=c("ID_merged","baseline_date")) %>%
+  filter(T_event > 0)
+
+# 连续变量 z 分数（论文口径）
+zcols <- c("AGE","EDUC","WMH_log","ttau","ptau181","AB42")
+for (v in zcols) anal[[paste0(v,"_z")]] <- as.numeric(scale(anal[[v]]))
+
+# 1) 交互模型
+fit_int <- coxph(Surv(T_event, status) ~ AGE_z + SEX + EDUC_z +
+                   WMH_log_z*ttau_z + ptau181_z + AB42_z,
+                 data = anal)
+summary(fit_int)
+
+
+
+# 2) simple slopes：在低/高 t-tau 评估 WMH 效应（用 tertiles 更贴论文）
+tt_cut <- quantile(anal$ttau, probs = c(1/3, 2/3), na.rm = TRUE)
+anal <- anal %>%
+  mutate(
+    ttau_grp = cut(ttau, breaks = c(-Inf, tt_cut, Inf),
+                   labels = c("Low","Mid","High"), include.lowest = TRUE)
+  )
+
+# 只用 Low / High 两组分别看 WMH 的 HR
+fit_low  <- coxph(Surv(T_event, status) ~ AGE_z + SEX + EDUC_z +
+                    WMH_log_z + ptau181_z + AB42_z,
+                  data = subset(anal, ttau_grp=="Low"))
+fit_high <- coxph(Surv(T_event, status) ~ AGE_z + SEX + EDUC_z +
+                    WMH_log_z + ptau181_z + AB42_z,
+                  data = subset(anal, ttau_grp=="High"))
+
+exp(cbind(HR_low  = coef(fit_low )["WMH_log_z"],
+          HR_high = coef(fit_high)["WMH_log_z"]))
+confint(fit_low )["WMH_log_z",]
+confint(fit_high)["WMH_log_z",]
+```
+
+
+```{r}
+fit_int %>% tbl_regression(exponentiate = TRUE)
+```
+
+```{r}
+
+```
+
+```{r}
+library(lme4)
+library(broom.mixed)
+
+# 1) 构建 MRI 纵向：按“各自第一次 MRI”定零点，年为单位
+mri_long <- df1 %>%
+  filter(!is.na(WMH_log)) %>%
+  group_by(ID_merged) %>%
+  mutate(t0_mri = min(Date_timeline, na.rm = TRUE),
+         t_years = as.numeric(difftime(Date_timeline, t0_mri, units="days"))/365.25,
+         AGE0 = first(year(t0_mri) - BIRTHYEAR),
+         SEX0 = first(SEX)) %>%
+  ungroup()
+
+# 2) CSF 纵向：同样按“各自第一次 CSF”定零点（或同 MRI 零点，一致性更强）
+csf_long <- df %>%
+  filter(!is.na(ttau)) %>%
+  group_by(ID_merged) %>%
+  mutate(t0_csf = min(Date_timeline, na.rm = TRUE),
+         t_years = as.numeric(difftime(Date_timeline, t0_csf, units="days"))/365.25,
+         AGE0 = first(year(t0_csf) - BIRTHYEAR),
+         SEX0 = first(SEX)) %>%
+  ungroup()
+
+# 3) 各自随机斜率（≥2 次观测的被试才有斜率）
+mri_long2 <- mri_long %>% group_by(ID_merged) %>% filter(n() >= 2) %>% ungroup()
+csf_long2 <- csf_long %>% group_by(ID_merged) %>% filter(n() >= 2) %>% ungroup()
+
+fit_wmh_lmm  <- lmer(WMH_log ~ t_years + AGE0 + SEX0 + (t_years | ID_merged), data = mri_long2)
+fit_ttau_lmm <- lmer(scale(ttau) ~ t_years + AGE0 + SEX0 + (t_years | ID_merged), data = csf_long2)
+
+sl_wmh  <- ranef(fit_wmh_lmm)$ID_merged[,"t_years", drop=TRUE]
+sl_ttau <- ranef(fit_ttau_lmm)$ID_merged[,"t_years", drop=TRUE]
+
+slopes <- tibble(
+  ID_merged = rownames(ranef(fit_wmh_lmm)$ID_merged),
+  slope_WMH = as.numeric(sl_wmh)
+) %>%
+  inner_join(tibble(
+    ID_merged = rownames(ranef(fit_ttau_lmm)$ID_merged),
+    slope_ttau = as.numeric(sl_ttau)
+  ), by = "ID_merged")
+
+# 4) 相关 + 回归（可加稳健法/去极端值）
+cor.test(slopes$slope_WMH, slopes$slope_ttau)
+summary(lm(slope_WMH ~ slope_ttau, data = slopes))
+
+
+```
+
+```{r}
+biocard_plot_files = plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
+
+biocard_plot_files
+```
+
+
+
+
+```{r}
+library(survminer)
+
+wmh_q  <- quantile(anal$WMH_log, 0.75, na.rm = TRUE)
+anal <- anal %>%
+  mutate(
+    WMH_bin  = ifelse(WMH_log >= wmh_q, "High WMH","Low WMH"),
+    ttau_hi  = ifelse(ttau >= tt_cut[2], "High t-tau","Low t-tau"),
+    group_2x2 = paste0(WMH_bin," / ", ttau_hi)
+  )
+
+sf <- survfit(Surv(T_event, status) ~ group_2x2, data = anal)
+ggsurvplot(sf, conf.int = FALSE, risk.table = TRUE,
+           legend.title = "", xlab = "Years since baseline",
+           ylab = "Proportion symptom-free")
+
+```
+```{r}
+fit_int: coxph(Surv(T_event,status) ~ AGE_z + SEX + EDUC_z +
+               WMH_log_z*ttau_z + ptau181_z + AB42_z, data=anal)
+
+b <- coef(fit_int)
+V <- vcov(fit_int)
+
+beta_W  <- b["WMH_log_z"]
+beta_I  <- b["WMH_log_z:ttau_z"]
+
+var_W   <- V["WMH_log_z","WMH_log_z"]
+var_I   <- V["WMH_log_z:ttau_z","WMH_log_z:ttau_z"]
+cov_WI  <- V["WMH_log_z","WMH_log_z:ttau_z"]
+
+simple_slope <- function(t0) {
+  est <- beta_W + t0*beta_I                    # log(HR) of WMH at ttau_z = t0
+  se  <- sqrt(var_W + t0^2*var_I + 2*t0*cov_WI)
+  HR  <- exp(est); LCL <- exp(est - 1.96*se); UCL <- exp(est + 1.96*se)
+  p   <- 2*pnorm(-abs(est/se))
+  data.frame(ttau_z=t0, HR=HR, LCL=LCL, UCL=UCL, p=p)
+}
+
+# 看几个代表性水平：均值±1SD、以及 t-tau 的三分位数中心
+tt_vals <- c(-1, 0, 1,
+             scale(quantile(anal$ttau, probs=c(1/3,2/3), na.rm=TRUE))[,1])
+do.call(rbind, lapply(tt_vals, simple_slope))
+
+```
+
+```{r}
+ADNI_table = get_src_table(path = "/Users/shijia.zhang/Downloads/MR_Image_Analysis (3)",
+                           ID_usr_list = c("RID"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE","SCANDATE"),
+                           IS_overlap_list = c("FALSE"),
+                           WINDOW_list = c(366))
+```
+

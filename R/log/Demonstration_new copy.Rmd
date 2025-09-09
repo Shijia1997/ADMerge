@@ -57,7 +57,7 @@ library(knitr)
 library(kableExtra)
 
 library(devtools)
-install_github("Shijia1997/ADMerge",force = TRUE)
+#install_github("Shijia1997/ADMerge",force = TRUE)
 
 library(ADMerge)
 # library(dplyr)
@@ -71,22 +71,24 @@ library(kableExtra)
 
 
 
-ADNI_table = get_src_table(path = "ADNI Demonstration",
+ADNI_table = get_src_table(path = "ADNI_demonstration_multi_site",
                            ID_usr_list = c("RID"),
-                           DATE_usr_list = c("EXAMDATE","VISDATE"),
+                           DATE_usr_list = c("EXAMDATE","VISDATE","SCANDATE"),
                            non_longitudinal_list = c("APOERES_ADNI_1_2_3"),
-                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE"),
-                           WINDOW_list = c(366,366,366,1830,366,366,366,366))
+                           IS_overlap_list = c("FALSE","FALSE","FALSE","TRUE","FALSE","FALSE","FALSE","FALSE","FALSE","FALSE"),
+                           WINDOW_list = c(366,366,366,1830,366,366,366,366,366,366))
 
 ADNI_table
 
-plot_files(path = "ADNI Demonstration", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
+plot_files(path = "ADNI_demonstration_multi_site", dict_src = ADNI_table, study_type = "ADNI",date_type = "Date") 
 
-ADNI_merged = ad_merge(path = "ADNI_Demonstration",
+ADNI_merged = ad_merge(path = "ADNI_demonstration_multi_site",
 DATE_type = "Date",
 timeline_file = "ADNI_Cognitive",
 dict_src = ADNI_table)
 # 
+
+
 
 complete_ADNI = review_complete(ADNI_merged, check_cols = c(
   # ---- 基本 ID / 时间 ----
@@ -790,6 +792,8 @@ plot_c1204
 
 ```
 ```{r}
+
+complete_BIOCARD$
 
 biocard_plot_files = plot_files(path = "/Users/shijia.zhang/Downloads/BIOCARD August 2021 internal", dict_src = BIOCARD_table, study_type = "BIOCARD",date_type = "Date") 
 
