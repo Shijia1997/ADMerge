@@ -1,92 +1,168 @@
-# AdMerge
-Alzheimer’s Disease (AD) Biomarker Collection Package.
+# ADWeaveR
 
-With sharp increases in AD cases, deaths, and costs stressing the health care system and caregivers, several major AD data sources exist which allow researchers to conduct their research. For example, the BIOCARD study is a longitudinal, observational study initiated in 1995, and designed to identify biomarkers associated with progression from cognitively normal to mild cognitive impairment or dementia; the ADNI study is a multicenter observation study launched in 2004, to collect clinical, imaging, genetic and biospecimen biomarkers from cohorts of different clinical states at baseline; the NACC UDS data is a collection of data reflecting the total enrollment since 2005 across 34 AD Centers and includes subjects with a range of cognitive status. 
+ADWeaveR is an R package for transparent and reproducible integration of multi-source longitudinal Alzheimer's disease cohort data.
 
-The ADMerge Package provides a function, `ad_merge()`, that merges data from various AD data sources to create a analysis dataset.This package establishes AD data standards and data dictionaries that define the formats and organization structures of the AD data across multiple data sources. R functions are provided for data analysts to integrate data from multiple data sources and create their analysis datasets. 
+The package is designed for researchers who work with raw, locally stored cohort files and need a clear workflow for:
 
-# Installation
+- reviewing source files and candidate ID/date fields,
+- choosing merge settings such as timeline file, time window, and overlap behavior,
+- aligning multimodal measurements to participant visit timelines, and
+- checking post-merge coverage and complete-case availability.
 
-Use the following codes to install the ADMerge package
-```R
+ADWeaveR is intended to complement general-purpose data tools such as `dplyr`, `tidyverse`, and `data.table`. It is also different from curated study-specific data packages such as `ADNIMERGE2` in the `alzverse` ecosystem. Rather than distributing pre-processed datasets, ADWeaveR provides a configurable workflow that researchers apply to their own local cohort files.
+
+This repository currently lives at `Shijia1997/ADMerge`, while the package and manuscript-facing name used in documentation is ADWeaveR.
+
+## Installation
+
+Install from GitHub:
+
+```r
 library(devtools)
 install_github("Shijia1997/ADMerge")
 library(ADMerge)
 ```
-For details about how to install a R package directly from GitHub: https://rdrr.io/cran/remotes/man/install_github.html.
 
-# Usage
+## What ADWeaveR Does
 
-## Prerequisites
-In order to collect biomarkers for AD, locally access to all biomarker files is needed. 
+ADWeaveR supports a workflow with four main steps:
 
-To help understand the significant amount of data in ADNI dataset, we provided [ADNI_Tools](https://github.com/Thewhey-Brian/ADNI_Tools) to provide/generate a reference files dictionary. So one can access the detailed information for all files without downloading them. 
+1. Build a source table from local CSV or Excel files.
+2. Review and customize detected identifiers, date variables, window sizes, and overlap settings.
+3. Merge all selected files to a user-chosen reference timeline.
+4. Review the merged output with summaries, plots, and complete-case checks.
 
-## Overview Data Structure
-Before merging all biomarkers across different files, it is crucial to review the files structure through function `get_src_table()`. 
+The package has been used in workflows motivated by AD cohort settings such as BIOCARD, ADNI, and AIBL-style longitudinal data organization.
 
-```R
-src_table = get_src_table(path_to_biomarker_files)
+## What You Need Before Using It
+
+- Local access to the cohort files you want to merge.
+- At least one participant identifier column in each file.
+- For longitudinal files, at least one usable date or visit-number variable.
+- A reference file that provides the timeline used to anchor the merge.
+
+Recommended preprocessing before building the source table:
+
+- standardize date formats,
+- harmonize participant identifiers across files,
+- separate true longitudinal files from cross-sectional files, and
+- apply quality-control or version restrictions before merging when needed.
+
+## Minimal Workflow
+
+### 1. Generate a source table
+
+```r
+src_table <- get_src_table("path_to_biomarker_files")
 ```
 
-The data structure table `src_table` will be one of the inputs for the main merging function.
+This step scans the input directory and summarizes each file, including:
 
-**Inputs:**
-- `path`: The path to the directory containing the data files.
-- `FILE_pattern`: A regular expression pattern that specifies the file types to include in the source table. The default is ".xlsx|.xls|.csv".
-- `ID_pattern`: A regular expression pattern that specifies the potential ID variables in the data files. The default is "ID".
-- `DATE_pattern`: A regular expression pattern that specifies the potential DATE variables in the data files. The default is "DATE|VISITNO".
-- `IS_overlap_list`: A list of logical values that specifies, when merging, whether overlapping between time windows is allowed (TRUE) or not (FALSE). The length of the list must be equal to the number of files being read. The default is NULL.
-- `WINDOW_list`: A list of numeric time windows for matching the DATE variables. The length of the list must be equal to the number of files being read. Default is NULL.
-- `ID_usr_list`: A list of user-specified ID variable names. If provided, the function will try to match the variable names to the potential ID variables in the data files. The default is NULL.
-- `DATE_usr_list`: A list of user-specified DATE variable names. If provided, the function will try to match the variable names to the potential DATE variables in the data files. The default is NULL.
-- `file`: A path to a file where the source table will be saved as a CSV file.
+- candidate ID fields,
+- candidate date fields,
+- selected merge fields,
+- overlap settings, and
+- matching windows.
 
-**Outputs:**
-A table with the following structure:
-  |        file.       |          VARS_in_file         |    ID_in_file   |         DATE_in_file           | ID_for_merge | DATE_for_merge | IS_overlap | WINDOW |
-  | ------------------ | :---------------------------  | :-------------- | :----------------------------- | ------------ | -------------- | ---------- | ------ | 
-  | CSF_file.csv       |  Phase; ID; RID; SITEID; ...  | ID; RID; SITEID | USERDATE; USERDATE2; EXAMDATE; |      ID      |    EXAMDATE    |   FALSE    |   366   |
-  | IMAGE_file.csv     |  Phase; ID; RID; SITEID; ...  | ID; RID; SITEID | USERDATE; USERDATE2; SCANDATE; |      ID      |    SCANDATE    |   FALSE    |   366   |
-  | DIAGNOSIS_file.csv |  Phase; ID; RID; SITEID; ...  | ID; RID; SITEID | USERDATE; USERDATE2;           |      ID      |    USERDATE    |   FALSE    |   366   |
+Common arguments for `get_src_table()` include:
 
-## Modify `src_table`
-There are two ways to modify `src_table` generated by `get_src_table()`.
-1. Run `get_src_table()` again with any specified `ID_usr_list`, `DATE_usr_list`, `IS_overlap_list`, `WINDOW_list`. Note: The length of the list must be equal to the number of files in `src_table`.
-2. Run `get_src_table()` again with `file` specified. This will save `src_table` as a csv file to the local directory. One can edit this csv file locally and input to the merging function later. 
+- `path`: directory containing input files.
+- `FILE_pattern`: file types to scan. Default includes `.csv`, `.xls`, and `.xlsx`.
+- `ID_pattern`: pattern used to detect candidate ID variables.
+- `DATE_pattern`: pattern used to detect candidate date or visit variables.
+- `ID_usr_list`: optional user-specified ID variables.
+- `DATE_usr_list`: optional user-specified date variables.
+- `IS_overlap_list`: whether file-specific windows are allowed to overlap.
+- `WINDOW_list`: file-specific matching windows.
+- `file`: optional path to save the source table as a CSV.
 
-## Merging
-The merging action is performed by function `ad_merge()`.
+### 2. Review and edit the source table
 
-```R
-ad_data = ad_merge("path_to_biomarker_files", DATE_type = "Date", dict_src = src_table)
+After generating `src_table`, review it carefully before merging.
+
+In particular, check:
+
+- `ID_in_file`
+- `DATE_in_file`
+- `ID_for_merge`
+- `DATE_for_merge`
+- `longitudinal`
+- `IS_overlap`
+- `WINDOW`
+
+You can either:
+
+1. rerun `get_src_table()` with user-specified settings, or
+2. save the table, edit it externally, and load it back for merging.
+
+### 3. Merge to a reference timeline
+
+```r
+ad_data <- ad_merge(
+  path = "path_to_biomarker_files",
+  DATE_type = "Date",
+  dict_src = src_table
+)
 ```
 
-**Inputs:**
-- `path`: The path to the directory containing the data files.
-- `DATE_type`: The type of DATE used in the data, either "Date" (e.g. 2017-1-16) or "Number" (e.g. 3 or m48 ...).
-- `dict_src`: A dataframe containing structual information of the input data files. Default NULL. Fill in if `src_table` is modified and stored in R environment.
-- `dict_src_path`: The path to the `src_table`. Default NULL. Fill in if `src_table` is modified locally with its csv file. 
-- `timeline_file`: The name of the file containing the timeline for the data. Could be any value in the **file** column of `src_table`.
-- `timeline_path`: The path to the timeline file. Default NULL. This is an alternative option for inputing `timeline_file`.
+Key arguments for `ad_merge()`:
 
-**Outputs:**
-- `analysis_data`: The merged dataset with all the relevant biomarker information.
-- `dict_src`: The `src_table` used for this merging. 
+- `path`: directory containing the input files.
+- `DATE_type`: `"Date"` for calendar dates or `"Number"` for visit-style time variables.
+- `dict_src`: source table stored in R.
+- `dict_src_path`: path to a saved source-table file.
+- `timeline_file`: the file used as the reference timeline.
+- `timeline_path`: optional explicit path to the reference file.
 
-## Summary Information
-s3 functions `summary()` and `plot()` are provided to get the summary information about the merged analysis data.
+The merged result contains:
 
-```R
+- `analysis_data`: the merged long-format dataset.
+- `dict_src`: the source-table configuration used for the merge.
+
+### 4. Inspect the merged output
+
+```r
 summary(ad_data)
-```
-```R
 plot(ad_data, distn = "SCF_m1", group = "SEX")
 ```
-There are several crucial inputs for the plotting function:
-- `distn` The name of the variable to plot the distribution.
-- `group` The name of the variable to group and colored in the plot. 
-- `baseline` A boolean indicating whether to include only the baseline data in the plot.
 
+Useful post-merge tools include:
 
+- `summary()`: reports core information about the merged result.
+- `plot()`: visualizes follow-up distributions and grouping patterns.
+- `review_complete()`: checks complete visits for a chosen set of variables.
+- `plot_files()`: creates interactive file-coverage plots before merging.
 
+Example complete-case review:
+
+```r
+complete_visits <- review_complete(
+  ad_data,
+  check_cols = c("ID_merged", "Date_timeline", "SEX", "APOECODE")
+)
+```
+
+## Practical Notes
+
+- A non-overlapping window is often a good starting point for standard longitudinal analyses.
+- Narrower windows are usually better for dense short-term follow-up.
+- Wider windows may improve retention, but they also increase temporal displacement and may require sensitivity analysis.
+- If multiple processing versions exist for the same modality, it is usually safer to restrict to one version unless version comparison is part of the analysis plan.
+- Saving the merged output together with the source table makes the workflow easier to audit and reproduce.
+
+## Repository Resources
+
+This repository includes:
+
+- package source code,
+- function documentation,
+- selected workflow examples and R Markdown files,
+- unit tests, and
+- GitHub Pages visualizations for public-facing coverage plots.
+
+Public pages:
+
+- ADNI coverage page: [adni_plot_files.html](https://shijia1997.github.io/ADMerge/adni_plot_files.html)
+- BIOCARD coverage page: [biocard_plot_files.html](https://shijia1997.github.io/ADMerge/biocard_plot_files.html)
+
+Raw cohort data are not distributed in this repository. ADNI data require the standard ADNI access process. BIOCARD data are restricted and may require separate approval through the study framework.

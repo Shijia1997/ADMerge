@@ -1,5 +1,57 @@
-.xlsx
-.csv
 .DS_Store
+.Rhistory
+.Rapp.history
 .RData
+.Rproj.user/
+.Ruserdata
+*~
+~$*
+.gitignore.save
+
+# Raw data and local analysis artifacts
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.rds
+*.RDS
+
+# Review / manuscript side files
+*.docx
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.tex
+
+# Rendered outputs
+*.html
+!docs/*.html
+!docs/index.html
+
+# knitr / quarto caches
+*_cache/
+*_files/
+data/
+demonstration_new/
+plot_file_example/
+R/ADNI_demonstration/
+R/data/
+R/data_all/
+R/log/
+R/*.png
+R/*_results.csv
+
+# htmlwidget dependency folders generated outside docs/
+lib/
+lib_*/
+
+# Package build artifacts
 inst/doc
+
+# Review-only working notes
+R/Response_to_Reviewers*
+R/FINAL_CHECKLIST.md
+R/first_round_comment_from_reviewer*

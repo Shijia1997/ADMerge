@@ -1,0 +1,1717 @@
+---
+title: "Sensitivity Analysis for ADWeaveR Window Alignment Parameters"
+author: "Shijia Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(ADMerge)
+library(tidyverse)
+library(lubridate)
+library(lmerTest)
+library(knitr)
+library(kableExtra)
+```
+
+Overview
+
+This document presents sensitivity analyses for the ADWeaveR longitudinal alignment algorithm.
+
+The goals are:
+	•	S1: Assess how alignment window size affects visit-level data retention.
+	•	S1b: Assess how alignment window size affects temporal displacement of matched MRI observations.
+	•	S2: Quantify duplicated assignment under overlap versus non-overlap strategies using ADMerge outputs.
+	•	S3: Assess how reference timeline choice affects visit-level coverage and multimodal complete-case availability.
+	•	S4: Assess whether downstream hippocampal LME estimates remain stable across window sizes.
+
+These analyses are intended to evaluate the practical robustness of user-controlled alignment settings. They do not imply that ADWeaveR automatically determines an optimal configuration.
+
+
+```{r}
+# ---- ADJUST THESE PATHS TO YOUR LOCAL SETUP ----
+data_path <- "data_all"
+
+# Non-longitudinal files: joined by ID only, no date window
+non_long <- c("APOERES_all", "PTDEMOG")
+
+# IMPORTANT: these must be CHARACTER VECTORS, not regex strings
+id_cols   <- c("RID")
+date_cols <- c("EXAMDATE", "VISDATE", "USERDATE")
+
+# Columns to assess modality coverage
+mri_cols    <- c("ST29SV", "ST88SV")
+ptau_cols   <- c("PLASMAPTAU181")
+cog_cols    <- c("LIMMTOTAL")
+plasma_cols <- c("pT217_F", "AB42_F")
+
+windows <- c(90, 180, 366, 730)
+
+# MRI source file used for provenance tagging in S2
+mri_file_for_s2 <- "UCSFFSX43_1_go_2.csv"
+mri_file_stub   <- tools::file_path_sans_ext(basename(mri_file_for_s2))
+```
+
+Diagnostic: Verify Source Table
+
+
+```{r}
+src_check <- get_src_table(
+  path                  = data_path,
+  ID_usr_list           = id_cols,
+  DATE_usr_list         = date_cols,
+  IS_overlap_list       = FALSE,
+  WINDOW_list           = 366,
+  non_longitudinal_list = non_long
+)
+
+src_check %>%
+  select(file, ID_for_merge, DATE_for_merge, IS_overlap, WINDOW, longitudinal) %>%
+  kable(caption = "Source table — verify DATE_for_merge is correct for each file") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+
+Helper Functions
+
+```{r}
+flag_any_nonmissing <- function(df, cols) {
+  avail <- intersect(cols, names(df))
+  if (length(avail) == 0) return(rep(FALSE, nrow(df)))
+  apply(df[, avail, drop = FALSE], 1, function(r) any(!is.na(r)))
+}
+
+build_src <- function(path, W, overlap_flag = FALSE) {
+  src <- get_src_table(
+    path                  = path,
+    ID_usr_list           = id_cols,
+    DATE_usr_list         = date_cols,
+    IS_overlap_list       = overlap_flag,
+    WINDOW_list           = W,
+    non_longitudinal_list = non_long
+  )
+  src
+}
+
+run_merge <- function(path, W, timeline_file = "DXSUM", overlap_flag = FALSE, dict_src = NULL) {
+  if (is.null(dict_src)) {
+    dict_src <- build_src(path, W, overlap_flag = overlap_flag)
+  }
+  ad_merge(
+    path          = path,
+    DATE_type     = "Date",
+    timeline_file = timeline_file,
+    dict_src      = dict_src
+  )
+}
+
+summarise_retention <- function(res, label = NULL) {
+  df <- res$analysis_data
+
+  has_mri    <- flag_any_nonmissing(df, mri_cols)
+  has_ptau   <- flag_any_nonmissing(df, ptau_cols)
+  has_cog    <- flag_any_nonmissing(df, cog_cols)
+  has_plasma <- flag_any_nonmissing(df, plasma_cols)
+
+  has_3mod <- has_mri & has_ptau & has_cog
+
+  n_complete <- df %>%
+    filter(has_3mod) %>%
+    distinct(ID_merged, Date_timeline) %>%
+    nrow()
+
+  n_subj_ge2_mri <- df %>%
+    filter(has_mri) %>%
+    distinct(ID_merged, Date_timeline) %>%
+    group_by(ID_merged) %>%
+    summarise(nv = n(), .groups = "drop") %>%
+    filter(nv >= 2) %>%
+    nrow()
+
+  out <- data.frame(
+    Label          = label,
+    N_ref_visits   = nrow(df),
+    N_subjects     = n_distinct(df$ID_merged),
+    MRI_ret_pct    = round(mean(has_mri)    * 100, 1),
+    pTau_ret_pct   = round(mean(has_ptau)   * 100, 1),
+    Cog_ret_pct    = round(mean(has_cog)    * 100, 1),
+    Plasma_ret_pct = round(mean(has_plasma) * 100, 1),
+    N_complete_3   = n_complete,
+    Complete_3_pct = round(n_complete / max(nrow(df), 1) * 100, 1),
+    N_subj_ge2_MRI = n_subj_ge2_mri
+  )
+
+  out
+}
+
+fit_hipp_lme <- function(res, window_label) {
+  df <- res$analysis_data
+
+  if (!all(c("ST29SV", "ST88SV") %in% names(df))) {
+    return(NULL)
+  }
+
+  df <- df %>%
+    mutate(
+      ID_merged     = as.character(ID_merged),
+      Date_timeline = as.Date(Date_timeline),
+      ST29SV        = suppressWarnings(as.numeric(ST29SV)),
+      ST88SV        = suppressWarnings(as.numeric(ST88SV)),
+      Hipp          = (ST29SV + ST88SV) / 2
+    ) %>%
+    distinct(ID_merged, Date_timeline, .keep_all = TRUE) %>%
+    filter(!is.na(Hipp)) %>%
+    group_by(ID_merged) %>%
+    arrange(Date_timeline) %>%
+    mutate(
+      bl_date   = first(Date_timeline),
+      Time_year = as.numeric(difftime(Date_timeline, bl_date, units = "days")) / 365.25
+    ) %>%
+    filter(n() >= 2, any(Time_year > 0)) %>%
+    ungroup()
+
+  n_subj <- n_distinct(df$ID_merged)
+  n_obs  <- nrow(df)
+
+  if (n_subj < 30) return(NULL)
+
+  fit <- tryCatch(
+    suppressMessages(
+      lmerTest::lmer(
+        Hipp ~ Time_year + (1 + Time_year | ID_merged),
+        data    = df,
+        REML    = TRUE,
+        control = lmerControl(
+          optimizer = "bobyqa",
+          optCtrl   = list(maxfun = 2e5)
+        )
+      )
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(fit)) return(NULL)
+
+  ct    <- as.data.frame(summary(fit)$coefficients)
+  beta1 <- ct["Time_year", "Estimate"]
+  se1   <- ct["Time_year", "Std. Error"]
+
+  data.frame(
+    Window_days = as.integer(window_label),
+    N_subjects  = n_subj,
+    N_obs       = n_obs,
+    Beta_Time   = round(beta1, 2),
+    SE          = round(se1, 2),
+    CI_lower    = round(beta1 - 1.96 * se1, 2),
+    CI_upper    = round(beta1 + 1.96 * se1, 2)
+  )
+}
+```
+
+S1: Window Size Sensitivity
+
+We run ADMerge four times (90, 180, 366, 730 days) using the same reference timeline (DXSUM) and compare visit-level retention and complete-case availability.
+
+```{r}
+merged_list  <- list()
+summary_rows <- list()
+
+for (W in windows) {
+  cat(sprintf("\n=== Window = %d days ===\n", W))
+  res <- run_merge(
+    path          = data_path,
+    W             = W,
+    timeline_file = "DXSUM",
+    overlap_flag  = FALSE
+  )
+  merged_list[[as.character(W)]] <- res
+  summary_rows[[as.character(W)]] <- summarise_retention(res, label = as.character(W))
+}
+
+s1_table <- bind_rows(summary_rows) %>%
+  mutate(Window_days = as.integer(Label)) %>%
+  select(Window_days, N_ref_visits, N_subjects,
+         MRI_ret_pct, pTau_ret_pct, Cog_ret_pct, Plasma_ret_pct,
+         N_complete_3, Complete_3_pct, N_subj_ge2_MRI)
+```
+
+```{r}
+kable(
+  s1_table,
+  col.names = c("Window (d)", "N Ref Visits", "N Subjects",
+                "MRI Ret (%)", "pTau Ret (%)", "Cog Ret (%)", "Plasma Ret (%)",
+                "N Complete (3-mod)", "Complete (%)", "N Subj >=2 MRI"),
+  caption = paste(
+    "Table S1: Visit-level data coverage across four alignment window sizes.",
+    "Complete = MRI + pTau181 + cognitive available at the same aligned visit."
+  ),
+  align = "r"
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r}
+s1_long <- s1_table %>%
+  select(Window_days, MRI_ret_pct, pTau_ret_pct, Cog_ret_pct, Plasma_ret_pct) %>%
+  pivot_longer(-Window_days, names_to = "Modality", values_to = "Retention_pct") %>%
+  mutate(
+    Modality = recode(
+      Modality,
+      MRI_ret_pct    = "MRI",
+      pTau_ret_pct   = "Plasma pTau181",
+      Cog_ret_pct    = "Cognitive",
+      Plasma_ret_pct = "Plasma panel"
+    )
+  )
+
+ggplot(s1_long, aes(x = Window_days, y = Retention_pct, color = Modality, group = Modality)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_vline(xintercept = 366, linetype = "dashed", color = "grey50") +
+  scale_x_continuous(breaks = windows) +
+  labs(
+    x = "Window size (days)",
+    y = "Retention rate (%)",
+    color = NULL,
+    title = "Visit-level modality retention across alignment windows"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+```
+
+Interpretation:
+Visit-level retention increases as the alignment window widens, but gains beyond 366 days are modest for this annual-visit ADNI setting. This supports using 366 days as a practical default for annual follow-up designs, while recognizing that the appropriate window remains a researcher-controlled choice.
+
+S1b: MRI Temporal Displacement Across Window Sizes
+
+To evaluate the trade-off between retention and temporal precision, we examine the absolute temporal displacement between the retained timeline anchor (Date_timeline) and the matched MRI source date.
+
+This analysis is based on ADMerge outputs. It requires that the merged dataset retains a source MRI date column from the MRI file used for hippocampal measures.
+
+```{r}
+find_mri_source_date_col <- function(df) {
+  nm <- names(df)
+
+  # Prefer explicit provenance date if present
+  priority <- c("MRI_SRC_DATE", "EXAMDATE.dup", "EXAMDATE")
+  hit <- intersect(priority, nm)
+  if (length(hit) > 0) return(hit[1])
+
+  # fallback: any date-like column containing EXAMDATE
+  candidates <- nm[grepl("EXAMDATE", nm, ignore.case = TRUE)]
+  if (length(candidates) > 0) return(candidates[1])
+
+  return(NA_character_)
+}
+
+get_mri_displacement <- function(res, window_label) {
+  df <- res$analysis_data
+
+  if (!("Date_timeline" %in% names(df))) return(NULL)
+  if (!all(c("ST29SV", "ST88SV") %in% names(df))) return(NULL)
+
+  src_date_col <- find_mri_source_date_col(df)
+  if (is.na(src_date_col)) {
+    message(sprintf("[W=%s] No MRI source date column found in merged output; skipping displacement plot.", window_label))
+    return(NULL)
+  }
+
+  has_mri <- flag_any_nonmissing(df, mri_cols)
+
+  out <- df %>%
+    mutate(
+      Date_timeline = as.Date(Date_timeline),
+      MRI_src_date  = as.Date(.data[[src_date_col]])
+    ) %>%
+    filter(has_mri, !is.na(Date_timeline), !is.na(MRI_src_date)) %>%
+    distinct(ID_merged, Date_timeline, MRI_src_date, .keep_all = TRUE) %>%
+    mutate(
+      Window_days   = as.integer(window_label),
+      abs_diff_days = abs(as.numeric(difftime(MRI_src_date, Date_timeline, units = "days")))
+    ) %>%
+    select(ID_merged, Date_timeline, MRI_src_date, Window_days, abs_diff_days)
+
+  out
+}
+```
+
+```{r}
+disp_list <- lapply(names(merged_list), function(W) get_mri_displacement(merged_list[[W]], W))
+disp_df <- bind_rows(Filter(Negate(is.null), disp_list))
+
+has_disp <- nrow(disp_df) > 0
+
+if (has_disp) {
+  disp_summary <- disp_df %>%
+    group_by(Window_days) %>%
+    summarise(
+      N_matched_MRI = n(),
+      Median_abs_diff = round(median(abs_diff_days, na.rm = TRUE), 1),
+      IQR_abs_diff    = round(IQR(abs_diff_days, na.rm = TRUE), 1),
+      P95_abs_diff    = round(quantile(abs_diff_days, 0.95, na.rm = TRUE), 1),
+      Prop_gt_90      = round(mean(abs_diff_days > 90, na.rm = TRUE) * 100, 1),
+      Prop_gt_180     = round(mean(abs_diff_days > 180, na.rm = TRUE) * 100, 1),
+      .groups = "drop"
+    )
+}
+```
+
+```{r}
+if (has_disp) {
+  kable(
+    disp_summary,
+    col.names = c("Window (d)", "N Matched MRI", "Median |Δ| (d)", "IQR |Δ| (d)",
+                  "95th pct |Δ| (d)", "Prop >90d (%)", "Prop >180d (%)"),
+    caption = paste(
+      "Table S1b: Absolute temporal displacement between matched MRI source dates and Date_timeline.",
+      "|Δ| denotes absolute displacement in days."
+    ),
+    align = "r"
+  ) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+}
+```
+
+```{r}
+if (has_disp) {
+  ggplot(disp_df, aes(x = factor(Window_days), y = abs_diff_days)) +
+    geom_violin(trim = FALSE, fill = "grey85", color = "grey40") +
+    geom_boxplot(width = 0.12, outlier.shape = NA, fill = "white") +
+    labs(
+      x = "Window size (days)",
+      y = "Absolute temporal displacement (days)",
+      title = "MRI temporal displacement across alignment windows"
+    ) +
+    theme_minimal(base_size = 13)
+}
+```
+
+Interpretation:
+As expected, larger alignment windows permit larger temporal offsets between the MRI source date and the retained timeline anchor. This visualizes the practical trade-off between higher visit-level retention and reduced temporal precision.
+
+
+S2: Overlap Strategy Comparison Using ADMerge Outputs
+
+
+```{r}
+make_temp_data_with_rowid <- function(data_path,
+                                      mri_file = "UCSFFSX43_1_go_2.csv",
+                                      date_col = "EXAMDATE") {
+  tmp_dir <- file.path(
+    tempdir(),
+    paste0("admerge_tmp_", format(Sys.time(), "%Y%m%d%H%M%S"))
+  )
+  dir.create(tmp_dir, recursive = TRUE, showWarnings = FALSE)
+
+  all_files <- list.files(data_path, full.names = TRUE)
+  file.copy(all_files, tmp_dir, overwrite = TRUE)
+
+  mri_path <- file.path(tmp_dir, mri_file)
+  mri_df <- read.csv(mri_path, stringsAsFactors = FALSE)
+
+  mri_df <- mri_df %>%
+    mutate(
+      MRI_ROWID    = seq_len(n()),
+      MRI_SRC_DATE = .data[[date_col]]
+    )
+
+  write.csv(mri_df, mri_path, row.names = FALSE)
+  tmp_dir
+}
+
+summarise_overlap_from_merge <- function(res, label = NULL) {
+  df <- res$analysis_data
+
+  req <- c("MRI_ROWID", "MRI_SRC_DATE", "ID_merged", "Date_timeline")
+  if (!all(req %in% names(df))) {
+    stop("Required provenance columns are missing in merged output.")
+  }
+
+  # keep rows where a specific MRI source row actually entered the merged output
+  out <- df %>%
+    filter(!is.na(MRI_ROWID)) %>%
+    distinct(ID_merged, Date_timeline, MRI_ROWID, .keep_all = TRUE)
+
+  rowid_stat <- out %>%
+    group_by(MRI_ROWID) %>%
+    summarise(
+      n_timeline_matches = n(),
+      .groups = "drop"
+    )
+
+  assignment_stat <- out %>%
+    summarise(N_total_assignments = n())
+
+  data.frame(
+    Strategy            = label,
+    N_unique_MRI_rows   = nrow(rowid_stat),
+    N_total_assignments = assignment_stat$N_total_assignments,
+    N_duplicated_rows   = sum(rowid_stat$n_timeline_matches >= 2),
+    Dup_rate_pct        = round(mean(rowid_stat$n_timeline_matches >= 2) * 100, 1),
+    Max_reuse           = max(rowid_stat$n_timeline_matches, na.rm = TRUE)
+  )
+}
+```
+
+
+```{r}
+tmp_data_path <- make_temp_data_with_rowid(
+  data_path = data_path,
+  mri_file  = mri_file_for_s2,
+  date_col  = "EXAMDATE"
+)
+
+run_merge_with_overlap <- function(tmp_path, W, overlap_flag) {
+  src <- get_src_table(
+    path                  = tmp_path,
+    ID_usr_list           = id_cols,
+    DATE_usr_list         = date_cols,
+    IS_overlap_list       = FALSE,
+    WINDOW_list           = W,
+    non_longitudinal_list = non_long
+  )
+
+  src <- src %>%
+    mutate(
+      IS_overlap = ifelse(longitudinal, overlap_flag, FALSE)
+    )
+
+  ad_merge(
+    path          = tmp_path,
+    DATE_type     = "Date",
+    timeline_file = "DXSUM",
+    dict_src      = src
+  )
+}
+
+s2_rows <- list()
+
+for (W in windows) {
+  cat(sprintf("\n=== S2 overlap comparison: W = %d ===\n", W))
+
+  res_voronoi <- run_merge_with_overlap(tmp_data_path, W, overlap_flag = FALSE)
+  res_overlap <- run_merge_with_overlap(tmp_data_path, W, overlap_flag = TRUE)
+
+  tab_v <- summarise_overlap_from_merge(res_voronoi, label = "Voronoi truncation") %>%
+    mutate(Window_days = W)
+
+  tab_o <- summarise_overlap_from_merge(res_overlap, label = "Full overlap") %>%
+    mutate(Window_days = W)
+
+  s2_rows[[paste0(W, "_V")]] <- tab_v
+  s2_rows[[paste0(W, "_O")]] <- tab_o
+}
+
+s2_table <- bind_rows(s2_rows) %>%
+  select(Window_days, Strategy,
+         N_unique_MRI_rows, N_total_assignments,
+         N_duplicated_rows, Dup_rate_pct, Max_reuse)
+```
+
+
+```{r}
+kable(
+  s2_table,
+  col.names = c("Window (d)", "Strategy",
+                "Unique MRI Rows", "Total Assignments",
+                "Duplicated Rows", "Dup Rate (%)", "Max Reuse"),
+  caption = paste(
+    "Table S2: Duplicated assignment estimated directly from ADMerge outputs.",
+    "MRI source rows were tagged with MRI_ROWID before merging.",
+    "Dup Rate (%) = proportion of unique MRI source rows assigned to two or more aligned visits."
+  ),
+  align = c("r", "l", "r", "r", "r", "r", "r")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r}
+s2_plot_df <- s2_table %>%
+  mutate(Strategy = factor(Strategy, levels = c("Voronoi truncation", "Full overlap")))
+
+ggplot(s2_plot_df, aes(x = factor(Window_days), y = Dup_rate_pct, fill = Strategy)) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.65) +
+  labs(
+    x = "Window size (days)",
+    y = "Duplicated source rows (%)",
+    title = "Duplicated assignment under overlap versus non-overlap strategies"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+Interpretation:
+Using ADMerge outputs directly, duplicated assignment of the same MRI source row increases under the overlap strategy and becomes more frequent as the window widens. Under the non-overlap / midpoint-truncated strategy, repeated assignment is prevented by construction. These results support treating IS_overlap as a sensitivity parameter and favor the non-overlap default for standard annual-visit longitudinal analyses.
+
+S3: Reference Timeline Sensitivity
+
+We compare two clinically meaningful reference timelines on the same ADNI dataset using a 366-day window and non-overlap alignment:
+	•	DXSUM (primary clinical anchor)
+	•	NEUROBAT (alternative cognitive anchor)
+	
+```{r}
+res_dx <- merged_list[["366"]]
+
+res_nb <- run_merge(
+  path          = data_path,
+  W             = 366,
+  timeline_file = "NEUROBAT",
+  overlap_flag  = FALSE
+)
+
+s3_table <- bind_rows(
+  summarise_retention(res_dx, label = "DXSUM (primary)"),
+  summarise_retention(res_nb, label = "NEUROBAT (alternative)")
+) %>%
+  rename(Timeline = Label) %>%
+  select(Timeline, N_ref_visits, N_subjects,
+         MRI_ret_pct, pTau_ret_pct, Cog_ret_pct,
+         N_complete_3, Complete_3_pct)
+```
+
+```{r}
+kable(
+  s3_table,
+  col.names = c("Reference Timeline", "N Ref Visits", "N Subjects",
+                "MRI Ret (%)", "pTau Ret (%)", "Cog Ret (%)",
+                "N Complete (3-mod)", "Complete (%)"),
+  caption = paste(
+    "Table S3: Merged dataset characteristics under two reference timeline choices",
+    "(same ADNI data, W = 366 days, non-overlap alignment)."
+  ),
+  align = c("l", "r", "r", "r", "r", "r", "r", "r")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+Interpretation:
+Changing the reference timeline changes visit-level denominators and retention percentages, as expected. In this ADNI example, however, the number of multimodal complete cases remains similar across the two clinically plausible anchors. This supports treating reference timeline selection as a meaningful sensitivity parameter rather than assuming a universally optimal default.
+
+S4: Downstream Inference Stability Across Window Sizes
+
+Using the merged datasets from S1, we fit the same random-intercept-plus-slope LME model of bilateral hippocampal volume over time:
+
+$$
+\text{Hipp}{ij} = \beta_0 + \beta_1 \cdot \text{Time_year}{ij} + u_{0i} + u_{1i}\cdot\text{Time_year}{ij} + \varepsilon{ij}
+$$
+
+where
+
+$$
+\text{Hipp} = (\text{ST29SV} + \text{ST88SV})/2
+$$
+
+and Time_year is years from each subject’s earliest aligned visit.
+
+
+```{r}
+s4_rows  <- lapply(names(merged_list), function(W) fit_hipp_lme(merged_list[[W]], W))
+s4_table <- bind_rows(Filter(Negate(is.null), s4_rows))
+```
+
+```{r}
+if (nrow(s4_table) > 0) {
+  ref_beta <- s4_table$Beta_Time[s4_table$Window_days == 366]
+
+  ggplot(s4_table, aes(x = factor(Window_days), y = Beta_Time)) +
+    { if (length(ref_beta) == 1)
+        geom_hline(yintercept = ref_beta, linetype = "dashed", color = "grey60")
+      else list() } +
+    geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper),
+                  width = 0.15, color = "steelblue", linewidth = 1) +
+    geom_point(size = 4, color = "steelblue") +
+    labs(
+      x = "Window size (days)",
+      y = "Annual atrophy (mm3/yr)",
+      title = "Hippocampal atrophy estimate across alignment windows"
+    ) +
+    theme_minimal(base_size = 13)
+}
+```
+
+Interpretation:
+In this example, the estimated annual hippocampal atrophy rate remains similar across the four window configurations, with overlapping confidence intervals. This suggests that the downstream LME result is stable across the tested window sizes for this specific ADNI analysis.
+
+Summary
+
+```{r}
+summary_df <- data.frame(
+  Analysis = c(
+    "S1: Window sensitivity",
+    "S1b: Temporal displacement",
+    "S2: Overlap strategy",
+    "S3: Reference timeline",
+    "S4: Downstream inference"
+  ),
+  Finding = c(
+    "Visit-level modality retention increases with wider windows, with modest gains beyond 366 days in this annual-visit ADNI setting.",
+    if (has_disp) {
+      "MRI temporal displacement increases as the alignment window widens, visualizing the trade-off between retention and temporal precision."
+    } else {
+      "MRI temporal displacement could not be summarized from the current merged output because a source MRI date column was not retained."
+    },
+    "Duplicated assignment of the same MRI source row increases under full overlap and becomes more frequent as the window widens.",
+    "Changing the reference timeline affects visit-level denominators and retention percentages, but multimodal complete-case counts remain similar in this ADNI example.",
+    "The hippocampal LME estimate remains similar across the four tested window sizes."
+  ),
+  Conclusion = c(
+    "A 366-day window is a practical default for annual follow-up, but should still be treated as a sensitivity parameter.",
+    if (has_disp) {
+      "Wider windows trade temporal precision for increased retention."
+    } else {
+      "Temporal offset inspection should be performed whenever source dates are available in the merged output."
+    },
+    "Non-overlap alignment is preferable when avoiding repeated assignment is important.",
+    "Reference timeline choice should be reported and, when plausible alternatives exist, examined in sensitivity analyses.",
+    "For this example analysis, downstream inference appears stable across the tested window sizes."
+  ),
+  stringsAsFactors = FALSE
+)
+
+kable(
+  summary_df,
+  caption = "Summary of sensitivity analysis findings",
+  align   = c("l", "l", "l")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) %>%
+  column_spec(1, bold = TRUE, width = "18%") %>%
+  column_spec(2, width = "46%") %>%
+  column_spec(3, width = "36%")
+```
+
+
+
+
+
+# displacement analysis
+
+```{r s1b-helpers, cache=TRUE}
+# Create a temporary copy of the data directory and inject MRI provenance columns
+make_temp_data_with_mri_provenance <- function(data_path,
+                                               mri_file = "UCSFFSX43_1_go_2.csv",
+                                               date_col = "EXAMDATE") {
+  tmp_dir <- file.path(
+    tempdir(),
+    paste0("admerge_tmp_disp_", format(Sys.time(), "%Y%m%d%H%M%S"))
+  )
+  dir.create(tmp_dir, recursive = TRUE, showWarnings = FALSE)
+
+  all_files <- list.files(data_path, full.names = TRUE)
+  file.copy(all_files, tmp_dir, overwrite = TRUE)
+
+  mri_path <- file.path(tmp_dir, mri_file)
+  mri_df <- read.csv(mri_path, stringsAsFactors = FALSE)
+
+  mri_df <- mri_df %>%
+    mutate(
+      MRI_ROWID    = seq_len(n()),
+      MRI_SRC_DATE = .data[[date_col]]
+    )
+
+  write.csv(mri_df, mri_path, row.names = FALSE)
+  tmp_dir
+}
+
+# Build source table with a chosen overlap policy
+build_src_with_overlap <- function(path, W, overlap_flag = FALSE) {
+  src <- get_src_table(
+    path                  = path,
+    ID_usr_list           = id_cols,
+    DATE_usr_list         = date_cols,
+    IS_overlap_list       = FALSE,
+    WINDOW_list           = W,
+    non_longitudinal_list = non_long
+  )
+
+  src <- src %>%
+    mutate(
+      IS_overlap = ifelse(longitudinal, overlap_flag, FALSE)
+    )
+
+  src
+}
+
+# Extract MRI temporal displacement from ADMerge output
+extract_mri_displacement <- function(res) {
+  df <- res$analysis_data
+
+  req <- c("MRI_ROWID", "MRI_SRC_DATE", "Date_timeline", "ID_merged")
+  if (!all(req %in% names(df))) {
+    stop("Required MRI provenance columns are missing in merged output.")
+  }
+
+  out <- df %>%
+    filter(!is.na(MRI_ROWID), !is.na(MRI_SRC_DATE), !is.na(Date_timeline)) %>%
+    mutate(
+      MRI_SRC_DATE  = as.Date(MRI_SRC_DATE),
+      Date_timeline = as.Date(Date_timeline),
+      abs_diff_days = abs(as.numeric(difftime(MRI_SRC_DATE, Date_timeline, units = "days"))),
+      signed_diff_days = as.numeric(difftime(MRI_SRC_DATE, Date_timeline, units = "days"))
+    ) %>%
+    distinct(ID_merged, Date_timeline, MRI_ROWID, .keep_all = TRUE)
+
+  out
+}
+```
+
+然后放主分析：
+
+
+```{r}
+library(ADMerge)
+library(tidyverse)
+library(lubridate)
+
+data_path <- "data_all"
+non_long <- c("APOERES_all", "PTDEMOG")
+
+id_cols   <- c("RID")
+date_cols <- c("EXAMDATE", "VISDATE", "USERDATE")
+
+windows <- c(90, 180, 366, 730)
+
+data_path = 'data_all'
+tmp_disp_path <- make_temp_data_with_mri_provenance(
+  data_path = data_path,
+  mri_file  = "UCSFFSX43_1_go_2.csv",
+  date_col  = "EXAMDATE"
+)
+
+disp_rows <- list()
+disp_sum_rows <- list()
+
+for (W in windows) {
+  cat(sprintf("\n=== Displacement analysis: W = %d ===\n", W))
+
+  src_tmp <- build_src_with_overlap(tmp_disp_path, W, overlap_flag = FALSE)
+
+  res_tmp <- ad_merge(
+    path          = tmp_disp_path,
+    DATE_type     = "Date",
+    timeline_file = "DXSUM",
+    dict_src      = src_tmp
+  )
+
+  disp_df_w <- extract_mri_displacement(res_tmp) %>%
+    mutate(Window_days = W)
+
+  disp_rows[[as.character(W)]] <- disp_df_w
+
+  disp_sum_rows[[as.character(W)]] <- disp_df_w %>%
+    summarise(
+      Window_days      = W,
+      N_matched_MRI    = n(),
+      Median_abs_diff  = round(median(abs_diff_days, na.rm = TRUE), 1),
+      IQR_abs_diff     = round(IQR(abs_diff_days, na.rm = TRUE), 1),
+      P95_abs_diff     = round(quantile(abs_diff_days, 0.95, na.rm = TRUE), 1),
+      Mean_abs_diff    = round(mean(abs_diff_days, na.rm = TRUE), 1),
+      Max_abs_diff     = round(max(abs_diff_days, na.rm = TRUE), 1),
+      Prop_gt_30       = round(mean(abs_diff_days > 30,  na.rm = TRUE) * 100, 1),
+      Prop_gt_90       = round(mean(abs_diff_days > 90,  na.rm = TRUE) * 100, 1),
+      Prop_gt_180      = round(mean(abs_diff_days > 180, na.rm = TRUE) * 100, 1)
+    )
+}
+
+disp_all <- bind_rows(disp_rows)
+disp_summary <- bind_rows(disp_sum_rows)
+```
+
+
+```{r}
+kable(
+  disp_summary,
+  col.names = c("Window (d)", "Matched MRI Rows", "Median |Δ| (d)", "IQR |Δ| (d)",
+                "95th pct |Δ| (d)", "Mean |Δ| (d)", "Max |Δ| (d)",
+                "Prop >30d (%)", "Prop >90d (%)", "Prop >180d (%)"),
+  caption = paste(
+    "Table S1b: MRI temporal displacement relative to Date_timeline, estimated from ADMerge outputs.",
+    "|Δ| denotes absolute date difference between MRI source date and aligned timeline date."
+  ),
+  align = "r"
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r}
+
+ggplot(disp_all, aes(x = factor(Window_days), y = abs_diff_days)) +
+  geom_violin(trim = FALSE, fill = "grey85", color = "grey40") +
+  geom_boxplot(width = 0.12, outlier.shape = NA, fill = "white") +
+  labs(
+    x = "Window size (days)",
+    y = "Absolute temporal displacement (days)",
+    title = "MRI temporal displacement across alignment windows"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+
+```{r}
+library(readr)
+
+all_files <- list.files(data_path, full.names = TRUE)
+csv_files <- all_files[grepl("\\.csv$", all_files, ignore.case = TRUE)]
+xlsx_files <- all_files[grepl("\\.xlsx?$", all_files, ignore.case = TRUE)]
+
+count_rows_safe <- function(f) {
+  ext <- tools::file_ext(f)
+  out <- tryCatch({
+    if (tolower(ext) == "csv") {
+      nrow(read.csv(f, stringsAsFactors = FALSE))
+    } else if (tolower(ext) %in% c("xls", "xlsx")) {
+      nrow(readxl::read_excel(f))
+    } else {
+      NA_integer_
+    }
+  }, error = function(e) NA_integer_)
+  out
+}
+
+row_counts <- sapply(all_files, count_rows_safe)
+
+data_summary <- data.frame(
+  N_total_files = length(all_files),
+  N_csv_files   = length(csv_files),
+  N_excel_files = length(xlsx_files),
+  N_files_readable = sum(!is.na(row_counts)),
+  Total_rows_readable = sum(row_counts, na.rm = TRUE),
+  Median_rows_per_file = round(median(row_counts, na.rm = TRUE), 1),
+  Max_rows_in_file = max(row_counts, na.rm = TRUE)
+)
+
+data_summary
+```
+
+
+```{r}
+kable(
+  data_summary,
+  caption = "Table S5a: Summary of the local ADNI data_all directory used for runtime illustration.",
+  align = "r"
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r}
+runtime_src <- system.time({
+  src_runtime <- get_src_table(
+    path                  = data_path,
+    ID_usr_list           = id_cols,
+    DATE_usr_list         = date_cols,
+    IS_overlap_list       = FALSE,
+    WINDOW_list           = 366,
+    non_longitudinal_list = non_long
+  )
+})
+
+runtime_merge <- system.time({
+  res_runtime <- ad_merge(
+    path          = data_path,
+    DATE_type     = "Date",
+    timeline_file = "DXSUM",
+    dict_src      = src_runtime
+  )
+})
+
+runtime_default <- data.frame(
+  Step = c("get_src_table()", "ad_merge()"),
+  User_sec    = round(c(runtime_src["user.self"], runtime_merge["user.self"]), 2),
+  System_sec  = round(c(runtime_src["sys.self"], runtime_merge["sys.self"]), 2),
+  Elapsed_sec = round(c(runtime_src["elapsed"], runtime_merge["elapsed"]), 2)
+)
+```
+
+```{r}
+kable(
+  runtime_default,
+  caption = paste(
+    "Table S5b: Wall-clock runtime illustration for the default ADNI workflow",
+    "(W = 366 days, DXSUM anchor).",
+    "Values reflect the local environment used for this revision and are descriptive rather than a formal benchmark."
+  ),
+  align = c("l", "r", "r", "r")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r}
+runtime_rows <- list()
+
+for (W in windows) {
+  cat(sprintf("\n=== Runtime: W = %d ===\n", W))
+
+  t_src <- system.time({
+    src_w <- get_src_table(
+      path                  = data_path,
+      ID_usr_list           = id_cols,
+      DATE_usr_list         = date_cols,
+      IS_overlap_list       = FALSE,
+      WINDOW_list           = W,
+      non_longitudinal_list = non_long
+    )
+  })
+
+  t_merge <- system.time({
+    res_w <- ad_merge(
+      path          = data_path,
+      DATE_type     = "Date",
+      timeline_file = "DXSUM",
+      dict_src      = src_w
+    )
+  })
+
+  runtime_rows[[as.character(W)]] <- data.frame(
+    Window_days      = W,
+    Src_elapsed_sec  = round(t_src["elapsed"], 2),
+    Merge_elapsed_sec= round(t_merge["elapsed"], 2),
+    Total_elapsed_sec= round(t_src["elapsed"] + t_merge["elapsed"], 2)
+  )
+}
+
+runtime_windows <- bind_rows(runtime_rows)
+```
+
+```{r}
+kable(
+  runtime_windows,
+  caption = paste(
+    "Table S5c: Runtime illustration across four window settings.",
+    "Measured on the local environment used for this revision; values are descriptive rather than a formal benchmark."
+  ),
+  align = "r"
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+S3b
+
+```{r}
+# =========================
+# S3b: Reference timeline downstream LME comparison
+# Complete runnable code
+# =========================
+
+library(ADMerge)
+library(tidyverse)
+library(lubridate)
+library(lmerTest)
+library(knitr)
+library(kableExtra)
+
+# ---- paths / settings ----
+data_path <- "data_all"
+
+non_long <- c("APOERES_all", "PTDEMOG")
+id_cols   <- c("RID")
+date_cols <- c("EXAMDATE", "VISDATE", "USERDATE")
+
+# ---- helper: fit hippocampal LME from one ADMerge result ----
+fit_hipp_lme_timeline <- function(res, timeline_label) {
+  df <- res$analysis_data
+
+  # required columns
+  req_cols <- c("ST29SV", "ST88SV", "ID_merged", "Date_timeline")
+  if (!all(req_cols %in% names(df))) {
+    message(sprintf("[%s] Required columns missing: %s",
+                    timeline_label,
+                    paste(setdiff(req_cols, names(df)), collapse = ", ")))
+    return(NULL)
+  }
+
+  df2 <- df %>%
+    mutate(
+      ID_merged     = as.character(ID_merged),
+      Date_timeline = as.Date(Date_timeline),
+      ST29SV        = suppressWarnings(as.numeric(ST29SV)),
+      ST88SV        = suppressWarnings(as.numeric(ST88SV)),
+      Hipp          = (ST29SV + ST88SV) / 2
+    ) %>%
+    distinct(ID_merged, Date_timeline, .keep_all = TRUE) %>%
+    filter(!is.na(Hipp), !is.na(Date_timeline)) %>%
+    group_by(ID_merged) %>%
+    arrange(Date_timeline, .by_group = TRUE) %>%
+    mutate(
+      bl_date   = first(Date_timeline),
+      Time_year = as.numeric(difftime(Date_timeline, bl_date, units = "days")) / 365.25
+    ) %>%
+    filter(n() >= 2, any(Time_year > 0)) %>%
+    ungroup()
+
+  n_subj <- n_distinct(df2$ID_merged)
+  n_obs  <- nrow(df2)
+
+  cat(sprintf("[%s] N subjects = %d; N observations = %d\n",
+              timeline_label, n_subj, n_obs))
+
+  if (n_subj < 30) {
+    message(sprintf("[%s] Too few subjects for LME.", timeline_label))
+    return(NULL)
+  }
+
+  fit <- tryCatch(
+    {
+      suppressMessages(
+        lmerTest::lmer(
+          Hipp ~ Time_year + (1 + Time_year | ID_merged),
+          data    = df2,
+          REML    = TRUE,
+          control = lme4::lmerControl(
+            optimizer = "bobyqa",
+            optCtrl   = list(maxfun = 2e5)
+          )
+        )
+      )
+    },
+    error = function(e) {
+      message(sprintf("[%s] LME failed: %s", timeline_label, conditionMessage(e)))
+      return(NULL)
+    }
+  )
+
+  if (is.null(fit)) return(NULL)
+
+  ct <- as.data.frame(summary(fit)$coefficients)
+
+  if (!"Time_year" %in% rownames(ct)) {
+    message(sprintf("[%s] Time_year coefficient not found.", timeline_label))
+    return(NULL)
+  }
+
+  beta1 <- ct["Time_year", "Estimate"]
+  se1   <- ct["Time_year", "Std. Error"]
+
+  data.frame(
+    Timeline    = timeline_label,
+    N_subjects  = n_subj,
+    N_obs       = n_obs,
+    Beta_Time   = round(beta1, 2),
+    SE          = round(se1, 2),
+    CI_lower    = round(beta1 - 1.96 * se1, 2),
+    CI_upper    = round(beta1 + 1.96 * se1, 2),
+    stringsAsFactors = FALSE
+  )
+}
+
+# ---- Step 1: build one shared source table (same window / same non-overlap settings) ----
+src_anchor <- get_src_table(
+  path                  = data_path,
+  ID_usr_list           = id_cols,
+  DATE_usr_list         = date_cols,
+  IS_overlap_list       = FALSE,
+  WINDOW_list           = 366,
+  non_longitudinal_list = non_long
+)
+
+# ---- Step 2: merge with DXSUM anchor ----
+cat("Merging with DXSUM as reference timeline...\n")
+res_dx <- ad_merge(
+  path          = data_path,
+  DATE_type     = "Date",
+  timeline_file = "DXSUM",
+  dict_src      = src_anchor
+)
+
+# ---- Step 3: merge with NEUROBAT anchor ----
+cat("Merging with NEUROBAT as reference timeline...\n")
+res_nb <- ad_merge(
+  path          = data_path,
+  DATE_type     = "Date",
+  timeline_file = "NEUROBAT",
+  dict_src      = src_anchor
+)
+
+# ---- Step 4: fit LME under each anchor ----
+s3_lme_table <- bind_rows(
+  fit_hipp_lme_timeline(res_dx, "DXSUM"),
+  fit_hipp_lme_timeline(res_nb, "NEUROBAT")
+)
+
+rownames(s3_lme_table) <- NULL
+
+# ---- Step 5: print table object ----
+print(s3_lme_table)
+
+# ---- Step 6: formatted table ----
+kable(
+  s3_lme_table,
+  col.names = c("Reference Timeline", "N Subjects", "N Obs",
+                "Beta (mm3/yr)", "SE", "95% CI Lower", "95% CI Upper"),
+  caption = paste(
+    "Table S3b: Hippocampal LME estimates under two reference timeline choices.",
+    "Similar point estimates with overlapping confidence intervals suggest that,",
+    "in this ADNI example, downstream hippocampal longitudinal inference is not materially altered by the choice of DXSUM versus NEUROBAT as the alignment anchor."
+  ),
+  align = c("l", "r", "r", "r", "r", "r", "r")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# ---- Step 7: optional plot ----
+ggplot(s3_lme_table, aes(x = Timeline, y = Beta_Time)) +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper), width = 0.12, linewidth = 0.9) +
+  geom_point(size = 3) +
+  labs(
+    x = "Reference timeline",
+    y = "Annual atrophy (mm3/yr)",
+    title = "Hippocampal LME by reference timeline"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r}
+library(ADMerge)
+library(tidyverse)
+library(lubridate)
+library(lmerTest)
+library(knitr)
+library(kableExtra)
+
+data_path <- "data_all"
+
+non_long <- c("APOERES_all", "PTDEMOG")
+id_cols   <- c("RID")
+date_cols <- c("EXAMDATE", "VISDATE", "USERDATE")
+
+# keep same default alignment as your main analysis
+default_window <- 366
+
+# helper: create source table, then keep/remove MRI files as needed
+build_src_for_mri_version <- function(data_path,
+                                      window_days = 366,
+                                      keep_files = NULL,
+                                      drop_files = NULL) {
+  src <- get_src_table(
+    path                  = data_path,
+    ID_usr_list           = id_cols,
+    DATE_usr_list         = date_cols,
+    IS_overlap_list       = FALSE,
+    WINDOW_list           = window_days,
+    non_longitudinal_list = non_long
+  )
+
+  # keep default non-overlap for longitudinal files
+  src <- src %>%
+    mutate(
+      IS_overlap = ifelse(longitudinal, FALSE, NA)
+    )
+
+  # optionally drop MRI files not wanted in this configuration
+  if (!is.null(drop_files)) {
+    src <- src %>% filter(!file %in% drop_files)
+  }
+
+  # optionally keep only chosen MRI files among UCSF MRI versions
+  if (!is.null(keep_files)) {
+    mri_version_files <- c("UCSFFSX43_1_go_2",
+                           "UCSFFSX51_1_go_2",
+                           "UCSFFSX6_ADNI_3",
+                           "UCSFFSX7")
+
+    src <- src %>%
+      filter(
+        !(file %in% mri_version_files) | (file %in% keep_files)
+      )
+  }
+
+  src
+}
+
+# helper: run merge
+run_merge_version <- function(src, timeline_file = "DXSUM") {
+  ad_merge(
+    path          = data_path,
+    DATE_type     = "Date",
+    timeline_file = timeline_file,
+    dict_src      = src
+  )
+}
+
+# helper: summarize retention / complete cases
+summarise_version_merge <- function(res, label,
+                                    mri_cols = c("ST29SV", "ST88SV"),
+                                    ptau_cols = c("PTAU181", "UGOTPTAU181", "PLASMAPTAU181"),
+                                    cog_cols = c("LIMMTOTAL", "MMSE", "ADAS13")) {
+  df <- res$analysis_data
+
+  flag_col <- function(cols) {
+    avail <- intersect(cols, names(df))
+    if (length(avail) == 0) return(rep(FALSE, nrow(df)))
+    apply(df[, avail, drop = FALSE], 1, function(r) any(!is.na(r)))
+  }
+
+  has_mri  <- flag_col(mri_cols)
+  has_ptau <- flag_col(ptau_cols)
+  has_cog  <- flag_col(cog_cols)
+
+  n_complete_3 <- df %>%
+    filter(has_mri & has_ptau & has_cog) %>%
+    distinct(ID_merged, Date_timeline) %>%
+    nrow()
+
+  tibble(
+    MRI_config       = label,
+    N_ref_visits     = nrow(df),
+    N_subjects       = n_distinct(df$ID_merged),
+    MRI_ret_pct      = round(mean(has_mri)  * 100, 1),
+    pTau_ret_pct     = round(mean(has_ptau) * 100, 1),
+    Cog_ret_pct      = round(mean(has_cog)  * 100, 1),
+    N_complete_3mod  = n_complete_3,
+    Complete_3mod_pct = round(n_complete_3 / max(nrow(df), 1) * 100, 1)
+  )
+}
+
+# helper: same hippocampal model you already used
+fit_hipp_lme_version <- function(res, label) {
+  df <- res$analysis_data
+
+  if (!all(c("ST29SV", "ST88SV") %in% names(df))) {
+    return(
+      tibble(
+        MRI_config = label,
+        N_subjects = NA_integer_,
+        N_obs = NA_integer_,
+        Beta_Time = NA_real_,
+        SE = NA_real_,
+        CI_lower = NA_real_,
+        CI_upper = NA_real_
+      )
+    )
+  }
+
+  df <- df %>%
+    mutate(
+      ID_merged     = as.character(ID_merged),
+      Date_timeline = as.Date(Date_timeline),
+      ST29SV        = suppressWarnings(as.numeric(ST29SV)),
+      ST88SV        = suppressWarnings(as.numeric(ST88SV)),
+      Hipp          = (ST29SV + ST88SV) / 2
+    ) %>%
+    distinct(ID_merged, Date_timeline, .keep_all = TRUE) %>%
+    filter(!is.na(Hipp)) %>%
+    group_by(ID_merged) %>%
+    arrange(Date_timeline, .by_group = TRUE) %>%
+    mutate(
+      bl_date   = first(Date_timeline),
+      Time_year = as.numeric(difftime(Date_timeline, bl_date, units = "days")) / 365.25
+    ) %>%
+    filter(n() >= 2, any(Time_year > 0)) %>%
+    ungroup()
+
+  n_subj <- n_distinct(df$ID_merged)
+  n_obs  <- nrow(df)
+
+  if (n_subj < 30) {
+    return(
+      tibble(
+        MRI_config = label,
+        N_subjects = n_subj,
+        N_obs = n_obs,
+        Beta_Time = NA_real_,
+        SE = NA_real_,
+        CI_lower = NA_real_,
+        CI_upper = NA_real_
+      )
+    )
+  }
+
+  fit <- tryCatch(
+    lmerTest::lmer(
+      Hipp ~ Time_year + (1 + Time_year | ID_merged),
+      data = df,
+      REML = TRUE,
+      control = lmerControl(optimizer = "bobyqa",
+                            optCtrl = list(maxfun = 2e5))
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(fit)) {
+    return(
+      tibble(
+        MRI_config = label,
+        N_subjects = n_subj,
+        N_obs = n_obs,
+        Beta_Time = NA_real_,
+        SE = NA_real_,
+        CI_lower = NA_real_,
+        CI_upper = NA_real_
+      )
+    )
+  }
+
+  ct <- as.data.frame(summary(fit)$coefficients)
+  beta1 <- ct["Time_year", "Estimate"]
+  se1   <- ct["Time_year", "Std. Error"]
+
+  tibble(
+    MRI_config = label,
+    N_subjects = n_subj,
+    N_obs      = n_obs,
+    Beta_Time  = round(beta1, 2),
+    SE         = round(se1, 2),
+    CI_lower   = round(beta1 - 1.96 * se1, 2),
+    CI_upper   = round(beta1 + 1.96 * se1, 2)
+  )
+  
+  
+}
+```
+
+```{r}
+
+src_fs51 <- build_src_for_mri_version(
+  data_path = data_path,
+  window_days = default_window,
+  keep_files = c("UCSFFSX51_1_go_2")
+)
+
+res_fs51 <- run_merge_version(src_fs51, timeline_file = "DXSUM")
+
+# configuration 2: FS6 only
+src_fs6 <- build_src_for_mri_version(
+  data_path = data_path,
+  window_days = default_window,
+  keep_files = c("UCSFFSX6_ADNI_3")
+)
+
+res_fs6 <- run_merge_version(src_fs6, timeline_file = "DXSUM")
+
+# configuration 3: FS51 + FS6
+src_fs51_fs6 <- build_src_for_mri_version(
+  data_path = data_path,
+  window_days = default_window,
+  keep_files = c("UCSFFSX51_1_go_2", "UCSFFSX6_ADNI_3")
+)
+
+res_fs51_fs6 <- run_merge_version(src_fs51_fs6, timeline_file = "DXSUM")
+
+# summary table
+version_summary <- bind_rows(
+  summarise_version_merge(res_fs51, "FS51 only"),
+  summarise_version_merge(res_fs6, "FS6 only"),
+  summarise_version_merge(res_fs51_fs6, "FS51 + FS6")
+)
+
+print(version_summary)
+
+kable(
+  version_summary,
+  caption = "Comparison of merged datasets under alternative MRI version configurations.",
+  align = c("l", rep("r", ncol(version_summary) - 1))
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# downstream LME
+version_lme <- bind_rows(
+  fit_hipp_lme_version(res_fs51, "FS51 only"),
+  fit_hipp_lme_version(res_fs6, "FS6 only"),
+  fit_hipp_lme_version(res_fs51_fs6, "FS51 + FS6")
+)
+
+print(version_lme)
+
+kable(
+  version_lme,
+  col.names = c("MRI configuration", "N Subjects", "N Obs",
+                "Beta (mm3/yr)", "SE", "95% CI Lower", "95% CI Upper"),
+  caption = "Hippocampal LME estimates under alternative MRI version configurations.",
+  align = c("l", "r", "r", "r", "r", "r", "r")
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+```{r}
+library(readr)
+
+aibl_path <- "aibl_biomarkers_data"
+csv_files <- list.files(aibl_path, pattern = "\\.csv$", full.names = TRUE)
+
+for (f in csv_files) {
+  cat("\n====================================================\n")
+  cat("FILE:", basename(f), "\n")
+  cat("====================================================\n")
+  
+  nms <- tryCatch(
+    names(read_csv(f, n_max = 0, show_col_types = FALSE)),
+    error = function(e) paste("ERROR:", conditionMessage(e))
+  )
+  
+  print(nms)
+}
+```
+
+```{r}
+library(ADMerge)
+library(dplyr)
+
+data_path <- "aibl_biomarkers_data"
+
+aibl_table <- get_src_table(
+  path = data_path,
+  ID_usr_list = c("RID"),
+  DATE_usr_list = c("EXAMDATE", "VISCODE", "APTESTDT", "PTDOB"),
+  IS_overlap_list = c(FALSE),
+  WINDOW_list = c(366),
+  non_longitudinal_list = c("aibl_ptdemog_01-Jun-2018", "aibl_apoeres_01-Jun-2018")
+)
+
+aibl_merged <- ad_merge(
+  path = data_path,
+  DATE_type = "Date",
+  timeline_file = "aibl_neurobat_01-Jun-2018",
+  dict_src = aibl_table
+)
+
+complete_aibl <- review_complete(
+  aibl_merged,
+  check_cols = c(
+    "ID_merged",
+    "Date_timeline"
+  )
+)
+
+summary(aibl_merged)
+nrow(aibl_merged$analysis_data)
+n_distinct(aibl_merged$analysis_data$ID_merged)
+nrow(complete_aibl$complete_df)
+```
+```{r}
+library(ADMerge)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(purrr)
+library(stringr)
+
+set.seed(20260313)
+
+#====================================================
+# 1. create synthetic dense-sampling dataset
+#====================================================
+
+out_dir <- "synthetic_dense_sampling"
+if (!dir.exists(out_dir)) dir.create(out_dir)
+
+n_subj <- 60
+visit_months <- c(0, 3, 6, 9, 12, 15, 18, 21, 24)   # every 3 months, 2 years
+n_visits <- length(visit_months)
+
+ids <- sprintf("S%03d", 1:n_subj)
+
+# subject-level baseline
+ptdemog <- tibble(
+  ID = ids,
+  SEX = sample(c("F", "M"), n_subj, replace = TRUE),
+  AGE_BL = round(rnorm(n_subj, mean = 72, sd = 6), 1),
+  APOE4 = rbinom(n_subj, 1, 0.35),
+  EDUC = sample(10:20, n_subj, replace = TRUE)
+)
+
+write.csv(ptdemog, file.path(out_dir, "synthetic_ptdemog.csv"), row.names = FALSE)
+
+# baseline date per subject
+baseline_dates <- tibble(
+  ID = ids,
+  BL_DATE = as.Date("2020-01-01") + sample(0:120, n_subj, replace = TRUE)
+)
+
+# reference timeline: quarterly visit file
+timeline_df <- map_dfr(ids, function(id) {
+  bl <- baseline_dates$BL_DATE[baseline_dates$ID == id]
+  tibble(
+    ID = id,
+    VISCODE = paste0("m", visit_months),
+    EXAMDATE = bl + round(visit_months * 30.4375),
+    DX = case_when(
+      visit_months < 12 ~ "CN",
+      visit_months < 21 ~ sample(c("CN", "MCI"), 1, prob = c(0.75, 0.25)),
+      TRUE ~ sample(c("CN", "MCI"), 1, prob = c(0.6, 0.4))
+    )
+  )
+})
+
+write.csv(timeline_df, file.path(out_dir, "synthetic_visits.csv"), row.names = FALSE)
+
+# cognition file: nearly every visit, mild date jitter
+cog_df <- timeline_df %>%
+  left_join(ptdemog, by = "ID") %>%
+  rowwise() %>%
+  mutate(
+    EXAMDATE = EXAMDATE + sample(-10:10, 1),
+    MMSE = round(
+      29 - 0.04 * (as.numeric(str_remove(VISCODE, "m"))) -
+        1.2 * APOE4 + rnorm(1, 0, 1.2),
+      0
+    ),
+    LIMMTOTAL = round(
+      12 - 0.08 * (as.numeric(str_remove(VISCODE, "m"))) -
+        0.9 * APOE4 + rnorm(1, 0, 1.5),
+      1
+    )
+  ) %>%
+  ungroup() %>%
+  select(ID, VISCODE, EXAMDATE, MMSE, LIMMTOTAL)
+
+# randomly drop 10% rows
+cog_df <- cog_df %>% slice_sample(prop = 0.90)
+
+write.csv(cog_df, file.path(out_dir, "synthetic_neurobat.csv"), row.names = FALSE)
+
+# plasma biomarker file: sparser, moderate jitter
+plasma_df <- timeline_df %>%
+  left_join(ptdemog, by = "ID") %>%
+  rowwise() %>%
+  mutate(
+    EXAMDATE = EXAMDATE + sample(-20:20, 1),
+    pTau181 = round(
+      2 + 0.05 * as.numeric(str_remove(VISCODE, "m")) + 0.7 * APOE4 + rnorm(1, 0, 0.6),
+      2
+    ),
+    Ab42 = round(
+      240 - 1.8 * as.numeric(str_remove(VISCODE, "m")) - 8 * APOE4 + rnorm(1, 0, 8),
+      1
+    )
+  ) %>%
+  ungroup() %>%
+  select(ID, VISCODE, EXAMDATE, pTau181, Ab42)
+
+# randomly keep only 70%
+plasma_df <- plasma_df %>% slice_sample(prop = 0.70)
+
+write.csv(plasma_df, file.path(out_dir, "synthetic_plasma.csv"), row.names = FALSE)
+
+# MRI file: every ~6 months, more jitter, separate modality schedule
+mri_visits <- c(0, 6, 12, 18, 24)
+
+mri_df <- map_dfr(ids, function(id) {
+  bl <- baseline_dates$BL_DATE[baseline_dates$ID == id]
+  apoe4 <- ptdemog$APOE4[ptdemog$ID == id]
+  tibble(
+    ID = id,
+    VISCODE = paste0("m", mri_visits),
+    EXAMDATE = bl + round(mri_visits * 30.4375) + sample(-25:25, length(mri_visits), replace = TRUE),
+    Hipp_L = round(3600 - 8 * mri_visits - 90 * apoe4 + rnorm(length(mri_visits), 0, 60), 1),
+    Hipp_R = round(3650 - 8 * mri_visits - 90 * apoe4 + rnorm(length(mri_visits), 0, 60), 1)
+  )
+})
+
+# randomly keep 85%
+mri_df <- mri_df %>% slice_sample(prop = 0.85)
+
+write.csv(mri_df, file.path(out_dir, "synthetic_mri.csv"), row.names = FALSE)
+
+#====================================================
+# 2. build source table
+#====================================================
+
+dense_src <- get_src_table(
+  path = out_dir,
+  ID_usr_list = c("ID"),
+  DATE_usr_list = c("EXAMDATE", "BL_DATE"),
+  IS_overlap_list = c(FALSE),
+  WINDOW_list = c(60),                   # 60-day window for dense sampling
+  non_longitudinal_list = c("synthetic_ptdemog")
+)
+
+dense_src
+
+#====================================================
+# 3. merge using dense timeline
+#====================================================
+
+dense_res <- ad_merge(
+  path = out_dir,
+  DATE_type = "Date",
+  timeline_file = "synthetic_visits",
+  dict_src = dense_src
+)
+
+#====================================================
+# 4. summary
+#====================================================
+
+summary(dense_res)
+
+# quick counts
+dense_df <- dense_res$analysis_data
+
+cat("Number of merged rows:", nrow(dense_df), "\n")
+cat("Number of participants:", dplyr::n_distinct(dense_df$ID_merged), "\n")
+
+#====================================================
+# 5. complete-case review
+#====================================================
+
+dense_complete <- review_complete(
+  dense_res,
+  check_cols = c(
+    "ID_merged",
+    "Date_timeline",
+    "DX",
+    "MMSE",
+    "LIMMTOTAL",
+    "pTau181",
+    "Ab42",
+    "Hipp_L",
+    "Hipp_R"
+  )
+)
+
+# if your function returns a list with complete_df
+if (is.list(dense_complete) && "complete_df" %in% names(dense_complete)) {
+  cc_df <- dense_complete$complete_df
+} else {
+  cc_df <- dense_complete
+}
+
+cat("Complete-case rows:", nrow(cc_df), "\n")
+cat("Complete-case participants:", dplyr::n_distinct(cc_df$ID_merged), "\n")
+
+#====================================================
+# 6. retention summary for reporting
+#====================================================
+
+retention_tbl <- dense_df %>%
+  mutate(
+    has_cog = !is.na(MMSE) | !is.na(LIMMTOTAL),
+    has_plasma = !is.na(pTau181) | !is.na(Ab42),
+    has_mri = !is.na(Hipp_L) | !is.na(Hipp_R)
+  ) %>%
+  summarise(
+    N_ref_visits = n(),
+    N_subjects = n_distinct(ID_merged),
+    Cog_ret_pct = round(mean(has_cog) * 100, 1),
+    Plasma_ret_pct = round(mean(has_plasma) * 100, 1),
+    MRI_ret_pct = round(mean(has_mri) * 100, 1),
+    Complete_all3_pct = round(mean(has_cog & has_plasma & has_mri) * 100, 1)
+  )
+
+retention_tbl
+
+#====================================================
+# 7. inspect temporal spacing after merge
+#====================================================
+
+dense_spacing <- dense_df %>%
+  distinct(ID_merged, Date_timeline) %>%
+  arrange(ID_merged, Date_timeline) %>%
+  group_by(ID_merged) %>%
+  mutate(diff_days = as.numeric(Date_timeline - lag(Date_timeline))) %>%
+  ungroup()
+
+spacing_summary <- dense_spacing %>%
+  summarise(
+    Median_followup_gap_days = median(diff_days, na.rm = TRUE),
+    IQR_followup_gap_days = IQR(diff_days, na.rm = TRUE),
+    Min_followup_gap_days = min(diff_days, na.rm = TRUE),
+    Max_followup_gap_days = max(diff_days, na.rm = TRUE)
+  )
+
+spacing_summary
+```
+

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADMerge GitHub Pages</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --card: #fffdf8;
+      --ink: #1f2a2e;
+      --muted: #5d686d;
+      --accent: #0a6c74;
+      --border: #d9d1c3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at top left, rgba(10,108,116,0.12), transparent 28%),
+        linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 56px 24px 72px;
+    }
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      margin: 0 0 12px;
+      line-height: 1.05;
+    }
+    p.lead {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin: 0 0 28px;
+      max-width: 680px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 18px 35px rgba(31, 42, 46, 0.08);
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+    }
+    .card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    a.button {
+      display: inline-block;
+      text-decoration: none;
+      color: white;
+      background: var(--accent);
+      padding: 10px 15px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .note {
+      margin-top: 30px;
+      padding: 18px 20px;
+      border-left: 4px solid var(--accent);
+      background: rgba(255, 253, 248, 0.85);
+      color: var(--muted);
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ADMerge</h1>
+    <p class="lead">
+      Public GitHub Pages entry point for interactive ADMerge examples. This repository is curated to
+      expose code, selected R Markdown files, and rendered public pages while keeping raw data,
+      reviewer files, and local analysis artifacts out of version control.
+    </p>
+
+    <section class="grid">
+      <article class="card">
+        <h2>ADNI Example</h2>
+        <p>Interactive ADNI visualization page rendered for GitHub Pages.</p>
+        <a class="button" href="./adni_plot_files.html">Open Page</a>
+      </article>
+
+      <article class="card">
+        <h2>BIOCARD Example</h2>
+        <p>Interactive BIOCARD visualization page rendered for GitHub Pages.</p>
+        <a class="button" href="./biocard_plot_files.html">Open Page</a>
+      </article>
+    </section>
+
+    <div class="note">
+      Keep only public-facing code and selected R Markdown sources in the repository. Raw datasets,
+      manuscript response files, caches, and one-off rendered outputs should remain local and untracked.
+    </div>
+  </main>
+</body>
+</html>

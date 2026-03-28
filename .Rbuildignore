@@ -1,0 +1,16 @@
+^docs$
+^data$
+^demonstration_new$
+^plot_file_example$
+^R/.*[.]Rmd$
+^R/.*[.]html$
+^R/.*_cache$
+^R/.*_files$
+^R/lib$
+^R/lib_.*
+^R/data$
+^R/data_all$
+^R/log$
+^[.]DS_Store$
+^[.]Rhistory$
+^[.]gitignore[.]save$
